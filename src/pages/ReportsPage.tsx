@@ -227,7 +227,7 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 2xl:grid-cols-6">
         <KpiCard icon={RotateCcw} label="Reoperaciones" value={metrics.totalReoperaciones} tone="amber" />
         <KpiCard icon={AlertCircle} label="Pendientes" value={metrics.reoperacionesPendientes} tone="red" />
         <KpiCard icon={CheckCircle2} label="Recuperaciones" value={metrics.totalRecuperaciones} tone="emerald" />
