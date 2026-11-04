@@ -94,7 +94,7 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
         })}
       </nav>
 
-      <div className="shrink-0 px-5 pb-6 pt-3">
+      <div className="shrink-0 px-5 pb-2 pt-3">
         <div className="flex items-center gap-3 rounded-2xl bg-white/10 px-2 py-2">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold text-accent-foreground">
             {initials}
@@ -113,7 +113,7 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
             <LogOut className="h-6 w-3" />
           </button>
         </div>
-        <div className="border-t border-white/15 pt-1 text-center">
+        <div className="mt-2 border-t border-white/15 pt-1 text-center">
           <p className="text-[8px] text-sidebar-foreground/10">Creado por Calidad</p>
           <p className="text-[10px] text-sidebar-foreground/15">Ing. Leober Reyes Hastie</p>
         </div>
