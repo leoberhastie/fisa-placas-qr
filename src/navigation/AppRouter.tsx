@@ -39,7 +39,7 @@ export function AppRouter({ profile }: AppRouterProps) {
   const [path, navigate] = useHashPath();
   const routes = getRoutesForRole(profile.role);
   const homePath = HOME_ROUTE_BY_ROLE[profile.role];
-  const isAllowed = routes.some((route) => route.path === path);
+  const isAllowed = path === '/produccion' || routes.some((route) => route.path === path);
   const activePath = isAllowed ? path : homePath;
 
   useEffect(() => {

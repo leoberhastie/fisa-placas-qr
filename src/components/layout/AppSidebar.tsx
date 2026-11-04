@@ -37,7 +37,7 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
           </div>
           <div className="min-w-0">
             <p className="font-heading text-[21px] font-bold leading-none tracking-tight text-sidebar-foreground">FISA-PLACAS</p>
-            <p className="mt-1 text-[15px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/60">Reoperaciones</p>
+            <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-sidebar-foreground/60">Reoperaciones</p>
           </div>
         </div>
       </div>
@@ -55,7 +55,7 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
               <p className="mt-2 truncate text-lg font-bold text-sidebar-foreground/70">Cargando...</p>
             ) : selectedProduction ? (
               <>
-                <p className="mt-2 truncate text-lg font-bold tracking-tight text-sidebar-foreground">
+                <p className="mt-2 truncate text-base font-bold tracking-tight text-sidebar-foreground">
                   {productionDisplayLabel(selectedProduction)}
                 </p>
                 <span className="mt-2 inline-flex rounded-full bg-success/25 px-3 py-1 text-xs font-bold uppercase text-sidebar-primary">
@@ -63,7 +63,7 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
                 </span>
               </>
             ) : (
-              <p className="mt-2 text-sm font-semibold text-sidebar-foreground/70">Seleccionar producción</p>
+              <p className="mt-2 text-xs font-semibold text-sidebar-foreground/70">Seleccionar producción</p>
             )}
           </div>
           <ChevronDown className="h-5 w-5 shrink-0 text-sidebar-foreground/70" aria-hidden="true" />
@@ -80,7 +80,7 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
               type="button"
               onClick={() => onNavigate(route.path)}
               aria-current={isActive ? 'page' : undefined}
-              className={`group relative flex w-full items-center gap-4 rounded-xl px-4 py-3.5 text-left text-[17px] font-semibold transition-colors duration-200 ${
+              className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition-colors duration-200 ${
                 isActive
                   ? 'bg-white/10 text-sidebar-foreground'
                   : 'text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground'

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle2, Package, RotateCcw, ShieldCheck } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
+import { Pagination } from '@/components/ui/Pagination';
 import { SelectedProductionBanner } from '@/components/productions/SelectedProductionBanner';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StatusLegend } from '@/components/ui/StatusLegend';
@@ -54,6 +55,8 @@ interface Filters {
   fechaInicial: string;
   fechaFinal: string;
 }
+
+const PAGE_SIZE = 50;
 
 const EMPTY_FILTERS: Filters = {
   serie: '',
@@ -120,6 +123,7 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
   useEffect(() => { void reload(); }, [selectedProductionId]);
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [page, setPage] = useState(1);
   const [cierreTarget, setCierreTarget] = useState<ReoperationRow | null>(null);
   const [closing, setClosing] = useState(false);
 
@@ -167,6 +171,8 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
   }, [allRows, filters]);
 
   const totalReoperaciones = allRows.length;
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const paginatedRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPlacasReoperadas = new Set(allRows.filter((r) => r.placaId).map((r) => r.placaId)).size;
   const totalPendientes = allRows.filter((r) => r.estado === 'pendiente').length;
   const totalRecuperaciones = recuperaciones.length;
@@ -174,6 +180,10 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
 
   const canOperate = profile ? canRegisterOperations(profile.role) : false;
   const filtersActive = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
+  const updateFilters = (nextFilters: Filters) => {
+    setFilters(nextFilters);
+    setPage(1);
+  };
 
   const handleCierreConfirm = async (motivo: string, tipoRecuperacion: string) => {
     if (!cierreTarget || !selectedProductionId) return;
@@ -272,29 +282,29 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
         </div>
 
         <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
-          <FilterInput label="Serie" value={filters.serie} placeholder="Buscar serie" onChange={(v) => setFilters({ ...filters, serie: v })} />
+          <FilterInput label="Serie" value={filters.serie} placeholder="Buscar serie" onChange={(v) => updateFilters({ ...filters, serie: v })} />
           <FilterSelect
             label="Caja"
             value={filters.caja}
-            onChange={(v) => setFilters({ ...filters, caja: v })}
+            onChange={(v) => updateFilters({ ...filters, caja: v })}
             options={[{ value: '', label: 'Todas las cajas' }, ...options.cajas.map((c) => ({ value: c, label: c }))]}
           />
           <FilterSelect
             label="Servicio"
             value={filters.servicio}
-            onChange={(v) => setFilters({ ...filters, servicio: v })}
+            onChange={(v) => updateFilters({ ...filters, servicio: v })}
             options={[{ value: '', label: 'Todos los servicios' }, ...options.servicios.map((s) => ({ value: s, label: s }))]}
           />
           <FilterSelect
             label="Proceso"
             value={filters.proceso}
-            onChange={(v) => setFilters({ ...filters, proceso: v })}
+            onChange={(v) => updateFilters({ ...filters, proceso: v })}
             options={[{ value: '', label: 'Todos los procesos' }, ...REOPERATION_PROCESSES.map((p) => ({ value: p, label: p }))]}
           />
           <FilterSelect
             label="Estado"
             value={filters.estado}
-            onChange={(v) => setFilters({ ...filters, estado: v })}
+            onChange={(v) => updateFilters({ ...filters, estado: v })}
             options={[
               { value: '', label: 'Todos los estados' },
               { value: 'pendiente', label: 'Pendiente' },
@@ -304,11 +314,11 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
           <FilterSelect
             label="Operador"
             value={filters.operador}
-            onChange={(v) => setFilters({ ...filters, operador: v })}
+            onChange={(v) => updateFilters({ ...filters, operador: v })}
             options={[{ value: '', label: 'Todos los operadores' }, ...options.operadores.map((o) => ({ value: o, label: o }))]}
           />
-          <FilterInput type="date" label="Fecha inicial" value={filters.fechaInicial} onChange={(v) => setFilters({ ...filters, fechaInicial: v })} />
-          <FilterInput type="date" label="Fecha final" value={filters.fechaFinal} onChange={(v) => setFilters({ ...filters, fechaFinal: v })} />
+          <FilterInput type="date" label="Fecha inicial" value={filters.fechaInicial} onChange={(v) => updateFilters({ ...filters, fechaInicial: v })} />
+          <FilterInput type="date" label="Fecha final" value={filters.fechaFinal} onChange={(v) => updateFilters({ ...filters, fechaFinal: v })} />
         </div>
 
         <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
@@ -316,7 +326,7 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
             Mostrando {filteredRows.length} de {allRows.length} reoperaciones
           </span>
           {filtersActive && (
-            <button type="button" onClick={() => setFilters(EMPTY_FILTERS)} className="font-medium text-accent hover:underline">
+            <button type="button" onClick={() => updateFilters(EMPTY_FILTERS)} className="font-medium text-accent hover:underline">
               Limpiar filtros
             </button>
           )}
@@ -324,7 +334,7 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
 
         <DataTable
           columns={columns}
-          rows={filteredRows}
+          rows={paginatedRows}
           getRowKey={(row) => row.id}
           emptyTitle="No hay reoperaciones con estos filtros"
           emptyDescription={
@@ -333,6 +343,15 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
               : 'Selecciona una producción para ver sus reoperaciones.'
           }
         />
+        {filteredRows.length > 0 && (
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            disabled={loading}
+            summary={`Mostrando ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredRows.length)} de ${filteredRows.length} reoperaciones`}
+          />
+        )}
       </PageLoader>
 
       {cierreTarget && (

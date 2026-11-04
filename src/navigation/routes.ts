@@ -1,7 +1,6 @@
 import {
   ClipboardList,
   FileBarChart,
-  Factory,
   Gauge,
   History,
   Layers,
@@ -26,7 +25,6 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/panel-admin', label: 'Panel de administrador', shortLabel: 'Admin', icon: LayoutDashboard, roles: ['admin'] },
   { path: '/lector-qr', label: 'Lector QR', shortLabel: 'QR', icon: QrCode, roles: ['admin', 'operador'] },
   { path: '/panel-control', label: 'Panel de control', shortLabel: 'Control', icon: Gauge, roles: ['admin', 'gerente'] },
-  { path: '/produccion', label: 'Selección de producción', shortLabel: 'Producción', icon: Factory, roles: ['admin', 'operador', 'gerente'] },
   { path: '/reoperaciones', label: 'Reoperaciones generales', shortLabel: 'Reoperaciones', icon: ClipboardList, roles: ['admin', 'operador', 'gerente'] },
   { path: '/servicios', label: 'Servicios', shortLabel: 'Servicios', icon: Layers, roles: ['admin', 'gerente'] },
   { path: '/cajas', label: 'Cajas con reoperaciones', shortLabel: 'Cajas', icon: Package, roles: ['admin', 'operador', 'gerente'] },
