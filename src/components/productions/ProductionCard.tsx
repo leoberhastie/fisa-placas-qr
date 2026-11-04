@@ -65,12 +65,12 @@ export function ProductionCard({
         Creada el {DATE_FORMATTER.format(new Date(production.created_at))}
       </p>
 
-      <div className="mt-auto flex flex-col gap-2 pt-5 sm:flex-row">
+      <div className="mt-auto grid grid-cols-1 gap-2 pt-5 sm:grid-cols-2">
         <button
           type="button"
           onClick={onSelect}
           disabled={isSelected || isArchived}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
+          className={`col-span-full flex min-w-0 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
             isSelected
               ? 'cursor-default bg-accent/10 text-accent'
               : isArchived
@@ -87,7 +87,7 @@ export function ProductionCard({
             type="button"
             onClick={onEdit}
             disabled={busy}
-            className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground/80 transition hover:bg-muted/50 disabled:opacity-50"
+            className="flex min-w-0 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground/80 transition hover:bg-muted/50 disabled:opacity-50"
           >
             <Edit className="h-4 w-4" />
             Editar
@@ -99,7 +99,7 @@ export function ProductionCard({
             type="button"
             onClick={() => onChangeStatus(isActive ? 'archivada' : 'activa')}
             disabled={busy}
-            className="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground/80 transition hover:bg-muted/50 disabled:opacity-50"
+            className="flex min-w-0 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground/80 transition hover:bg-muted/50 disabled:opacity-50"
           >
             {isArchived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
             {isArchived ? 'Restaurar' : 'Archivar'}
