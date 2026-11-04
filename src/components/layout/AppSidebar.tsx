@@ -109,10 +109,10 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
             aria-label="Cerrar sesión"
             className="rounded-lg p-2 text-sidebar-foreground/70 transition hover:bg-white/10 hover:text-sidebar-foreground disabled:opacity-50"
           >
-            <LogOut className="h-6 w-6" />
+            <LogOut className="h-6 w-3" />
           </button>
         </div>
-        <div className="mt-6 border-t border-white/15 pt-5 text-center">
+        <div className="mt-4 border-t border-white/15 pt-5 text-center">
           <p className="text-[8px] text-sidebar-foreground/10">Creado por Calidad</p>
           <p className="mt-1 text-[10px] text-sidebar-foreground/15">Ing. Leober Reyes Hastie</p>
         </div>
