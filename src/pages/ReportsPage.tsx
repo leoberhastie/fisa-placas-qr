@@ -1,5 +1,7 @@
 import { AlertCircle, CheckCircle2, Package, RotateCcw, Users, Wrench } from 'lucide-react';
+import { useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { Pagination } from '@/components/ui/Pagination';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { SelectedProductionBanner } from '@/components/productions/SelectedProductionBanner';
@@ -23,6 +25,8 @@ import { productionDisplayLabel } from '@/types/domain';
 interface ScreenProps {
   onNavigate: (path: string) => void;
 }
+
+const CAJAS_PAGE_SIZE = 50;
 
 const REOP_PROCESO_COLUMNS: ExportColumn<ReopServicioProcesoRow>[] = [
   { header: 'Servicio', value: (r) => r.servicio },
@@ -107,6 +111,12 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
   const reopProceso = reportData?.reopsByServicioProceso ?? [];
   const recupServicio = reportData?.recupsByServicio ?? [];
   const cajas = reportData?.estadoCajas ?? [];
+  const [cajasPage, setCajasPage] = useState(1);
+  const cajasTotalPages = Math.max(1, Math.ceil(cajas.length / CAJAS_PAGE_SIZE));
+  const cajasCurrentPage = Math.min(cajasPage, cajasTotalPages);
+  const cajasStart = cajas.length === 0 ? 0 : (cajasCurrentPage - 1) * CAJAS_PAGE_SIZE + 1;
+  const cajasEnd = Math.min(cajasCurrentPage * CAJAS_PAGE_SIZE, cajas.length);
+  const cajasPageRows = cajas.slice((cajasCurrentPage - 1) * CAJAS_PAGE_SIZE, cajasCurrentPage * CAJAS_PAGE_SIZE);
   const top = reportData?.topPlacas ?? [];
   const evolucion = reportData?.evolucion ?? [];
   const operadores = reportData?.recupsPorOperador ?? [];
@@ -296,7 +306,19 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
         description="Cajas con reoperaciones, indicando si están pendientes o completas."
         actions={exportMenu('Estado de cajas', 'estado-cajas', CAJA_ESTADO_COLUMNS, cajas)}
       >
-        <DataTable columns={cajaColumns} rows={cajas} getRowKey={(r) => `${r.servicio}-${r.caja}`} {...tableEmpty} />
+        <Pagination
+          page={cajasCurrentPage}
+          totalPages={cajasTotalPages}
+          onPageChange={setCajasPage}
+          disabled={loading}
+          summary={cajas.length > 0 ? `Mostrando ${cajasStart}–${cajasEnd} de ${cajas.length} cajas` : undefined}
+        />
+        <DataTable columns={cajaColumns} rows={cajasPageRows} getRowKey={(r) => `${r.servicio}-${r.caja}`} {...tableEmpty} />
+        {cajas.length > CAJAS_PAGE_SIZE && (
+          <div className="mt-4 flex justify-end">
+            <Pagination page={cajasCurrentPage} totalPages={cajasTotalPages} onPageChange={setCajasPage} disabled={loading} />
+          </div>
+        )}
       </ReportSection>
 
       <ReportSection

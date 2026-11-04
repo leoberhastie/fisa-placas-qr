@@ -48,6 +48,27 @@ export async function listPlacasByProduction(produccionId: string): Promise<Plac
   );
 }
 
+const PLACA_ID_CHUNK_SIZE = 150;
+
+export async function listPlacasByIds(produccionId: string, ids: string[]): Promise<Placa[]> {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += PLACA_ID_CHUNK_SIZE) {
+    chunks.push(ids.slice(i, i + PLACA_ID_CHUNK_SIZE));
+  }
+  const results = await Promise.all(
+    chunks.map(async (chunk) => {
+      const { data, error } = await supabase
+        .from('placas')
+        .select(PLACA_COLUMNS)
+        .eq('produccion_id', produccionId)
+        .in('id', chunk);
+      if (error) throw new Error('No se pudieron cargar las placas.');
+      return (data ?? []) as Placa[];
+    }),
+  );
+  return results.flat();
+}
+
 export async function findPlaca(
   produccionId: string,
   serie: string,

@@ -9,7 +9,7 @@ import { FilterInput, FilterSelect } from '@/components/filters/FilterControls';
 import { ExportMenu } from '@/components/export/ExportMenu';
 import { useAuth } from '@/context/AuthContext';
 import { useProductionSelection } from '@/context/ProductionSelectionContext';
-import { useProductionData } from '@/hooks/useProductionData';
+import { useHistoryData } from '@/hooks/useHistoryData';
 import { useProductions } from '@/hooks/useProductions';
 import { isWithinDateRange } from '@/lib/dateKey';
 import { PageLoader } from '@/components/ui/PageLoader';
@@ -104,7 +104,7 @@ export function HistoryPage({ onNavigate }: ScreenProps) {
   const { profile } = useAuth();
   const { operatorName, selectedProductionId } = useProductionSelection();
   const { productions } = useProductions();
-  const { historial, placas, reoperaciones, recuperaciones, loading, error, reload } = useProductionData(selectedProductionId);
+  const { historial, placas, reoperaciones, recuperaciones, loading, error, reload } = useHistoryData(selectedProductionId);
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [placaSerie, setPlacaSerie] = useState<string | null>(null);
