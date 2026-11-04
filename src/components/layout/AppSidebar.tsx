@@ -95,7 +95,7 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
 
       <div className="shrink-0 px-5 pb-6 pt-3">
         <div className="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-4">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold text-accent-foreground">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-lg font-bold text-accent-foreground">
             {initials}
           </span>
           <div className="min-w-0 flex-1">
