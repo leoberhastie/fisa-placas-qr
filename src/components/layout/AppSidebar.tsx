@@ -113,9 +113,9 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
             <LogOut className="h-6 w-3" />
           </button>
         </div>
-        <div className="mt-2 border-t border-white/15 pt-1 text-center">
+        <div className="border-t border-white/15 pt-1 text-center">
           <p className="text-[8px] text-sidebar-foreground/10">Creado por Calidad</p>
-          <p className="mt-1 text-[10px] text-sidebar-foreground/15">Ing. Leober Reyes Hastie</p>
+          <p className="text-[10px] text-sidebar-foreground/15">Ing. Leober Reyes Hastie</p>
         </div>
       </div>
     </div>
