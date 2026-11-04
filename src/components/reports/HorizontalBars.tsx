@@ -12,7 +12,7 @@ export function HorizontalBars({ items, emptyText = 'Sin datos para graficar.' }
     <ul className="space-y-2">
       {items.map((item) => (
         <li key={item.label} className="grid grid-cols-[minmax(0,10rem)_1fr_auto] items-center gap-3 text-sm">
-          <span className="truncate text-foreground/80" title={item.label}>
+          <span className="text-xs truncate text-foreground/80" title={item.label}>
             {item.label}
           </span>
           <div className="h-2.5 overflow-hidden rounded-full bg-muted">
