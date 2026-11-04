@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, Loader2, Package, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Package, RotateCcw, ShieldCheck } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { SelectedProductionBanner } from '@/components/productions/SelectedProductionBanner';
@@ -16,6 +16,7 @@ import { fetchReoperacionesWithPlaca, type ReoperationWithPlaca } from '@/servic
 import { useProductions } from '@/hooks/useProductions';
 import { exportExcel, exportPdf, type ExportColumn } from '@/lib/exportFiles';
 import { isWithinDateRange } from '@/lib/dateKey';
+import { PageLoader } from '@/components/ui/PageLoader';
 import {
   canRegisterOperations,
   productionDisplayLabel,
@@ -257,83 +258,70 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
 
       <SelectedProductionBanner onNavigate={onNavigate} />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <KpiCard icon={RotateCcw} label="Total reoperaciones" value={totalReoperaciones} tone="amber" />
-        <KpiCard icon={Package} label="Placas reoperadas" value={totalPlacasReoperadas} tone="navy" />
-        <KpiCard icon={AlertCircle} label="Pendientes" value={totalPendientes} tone="red" />
-        <KpiCard icon={ShieldCheck} label="Recuperaciones" value={totalRecuperaciones} tone="emerald" />
-        <KpiCard icon={CheckCircle2} label="Placas recuperadas" value={totalPlacasRecuperadas} tone="emerald" />
-      </div>
-
-      <div className="rounded-2xl border border-border bg-card px-5 py-4 shadow-sm">
-        <StatusLegend />
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
-        <FilterInput label="Serie" value={filters.serie} placeholder="Buscar serie" onChange={(v) => setFilters({ ...filters, serie: v })} />
-        <FilterSelect
-          label="Caja"
-          value={filters.caja}
-          onChange={(v) => setFilters({ ...filters, caja: v })}
-          options={[{ value: '', label: 'Todas las cajas' }, ...options.cajas.map((c) => ({ value: c, label: c }))]}
-        />
-        <FilterSelect
-          label="Servicio"
-          value={filters.servicio}
-          onChange={(v) => setFilters({ ...filters, servicio: v })}
-          options={[{ value: '', label: 'Todos los servicios' }, ...options.servicios.map((s) => ({ value: s, label: s }))]}
-        />
-        <FilterSelect
-          label="Proceso"
-          value={filters.proceso}
-          onChange={(v) => setFilters({ ...filters, proceso: v })}
-          options={[{ value: '', label: 'Todos los procesos' }, ...REOPERATION_PROCESSES.map((p) => ({ value: p, label: p }))]}
-        />
-        <FilterSelect
-          label="Estado"
-          value={filters.estado}
-          onChange={(v) => setFilters({ ...filters, estado: v })}
-          options={[
-            { value: '', label: 'Todos los estados' },
-            { value: 'pendiente', label: 'Pendiente' },
-            { value: 'completo', label: 'Recuperada' },
-          ]}
-        />
-        <FilterSelect
-          label="Operador"
-          value={filters.operador}
-          onChange={(v) => setFilters({ ...filters, operador: v })}
-          options={[{ value: '', label: 'Todos los operadores' }, ...options.operadores.map((o) => ({ value: o, label: o }))]}
-        />
-        <FilterInput type="date" label="Fecha inicial" value={filters.fechaInicial} onChange={(v) => setFilters({ ...filters, fechaInicial: v })} />
-        <FilterInput type="date" label="Fecha final" value={filters.fechaFinal} onChange={(v) => setFilters({ ...filters, fechaFinal: v })} />
-      </div>
-
-      <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-        <span>
-          Mostrando {filteredRows.length} de {allRows.length} reoperaciones
-        </span>
-        {filtersActive && (
-          <button type="button" onClick={() => setFilters(EMPTY_FILTERS)} className="font-medium text-accent hover:underline">
-            Limpiar filtros
-          </button>
-        )}
-      </div>
-
-      {loading && (
-        <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin text-accent" />
-          Cargando reoperaciones...
+      <PageLoader loading={loading} error={error} onRetry={() => void reload()} hasData={reoperaciones.length > 0}>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+          <KpiCard icon={RotateCcw} label="Total reoperaciones" value={totalReoperaciones} tone="amber" />
+          <KpiCard icon={Package} label="Placas reoperadas" value={totalPlacasReoperadas} tone="navy" />
+          <KpiCard icon={AlertCircle} label="Pendientes" value={totalPendientes} tone="red" />
+          <KpiCard icon={ShieldCheck} label="Recuperaciones" value={totalRecuperaciones} tone="emerald" />
+          <KpiCard icon={CheckCircle2} label="Placas recuperadas" value={totalPlacasRecuperadas} tone="emerald" />
         </div>
-      )}
 
-      {error && (
-        <div role="alert" className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
+        <div className="rounded-2xl border border-border bg-card px-5 py-4 shadow-sm">
+          <StatusLegend />
         </div>
-      )}
 
-      {!loading && !error && (
+        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
+          <FilterInput label="Serie" value={filters.serie} placeholder="Buscar serie" onChange={(v) => setFilters({ ...filters, serie: v })} />
+          <FilterSelect
+            label="Caja"
+            value={filters.caja}
+            onChange={(v) => setFilters({ ...filters, caja: v })}
+            options={[{ value: '', label: 'Todas las cajas' }, ...options.cajas.map((c) => ({ value: c, label: c }))]}
+          />
+          <FilterSelect
+            label="Servicio"
+            value={filters.servicio}
+            onChange={(v) => setFilters({ ...filters, servicio: v })}
+            options={[{ value: '', label: 'Todos los servicios' }, ...options.servicios.map((s) => ({ value: s, label: s }))]}
+          />
+          <FilterSelect
+            label="Proceso"
+            value={filters.proceso}
+            onChange={(v) => setFilters({ ...filters, proceso: v })}
+            options={[{ value: '', label: 'Todos los procesos' }, ...REOPERATION_PROCESSES.map((p) => ({ value: p, label: p }))]}
+          />
+          <FilterSelect
+            label="Estado"
+            value={filters.estado}
+            onChange={(v) => setFilters({ ...filters, estado: v })}
+            options={[
+              { value: '', label: 'Todos los estados' },
+              { value: 'pendiente', label: 'Pendiente' },
+              { value: 'completo', label: 'Recuperada' },
+            ]}
+          />
+          <FilterSelect
+            label="Operador"
+            value={filters.operador}
+            onChange={(v) => setFilters({ ...filters, operador: v })}
+            options={[{ value: '', label: 'Todos los operadores' }, ...options.operadores.map((o) => ({ value: o, label: o }))]}
+          />
+          <FilterInput type="date" label="Fecha inicial" value={filters.fechaInicial} onChange={(v) => setFilters({ ...filters, fechaInicial: v })} />
+          <FilterInput type="date" label="Fecha final" value={filters.fechaFinal} onChange={(v) => setFilters({ ...filters, fechaFinal: v })} />
+        </div>
+
+        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+          <span>
+            Mostrando {filteredRows.length} de {allRows.length} reoperaciones
+          </span>
+          {filtersActive && (
+            <button type="button" onClick={() => setFilters(EMPTY_FILTERS)} className="font-medium text-accent hover:underline">
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+
         <DataTable
           columns={columns}
           rows={filteredRows}
@@ -345,7 +333,7 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
               : 'Selecciona una producción para ver sus reoperaciones.'
           }
         />
-      )}
+      </PageLoader>
 
       {cierreTarget && (
         <CierreManualModal

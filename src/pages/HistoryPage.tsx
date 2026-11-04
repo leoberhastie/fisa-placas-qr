@@ -12,6 +12,7 @@ import { useProductionSelection } from '@/context/ProductionSelectionContext';
 import { useProductionData } from '@/hooks/useProductionData';
 import { useProductions } from '@/hooks/useProductions';
 import { isWithinDateRange } from '@/lib/dateKey';
+import { PageLoader } from '@/components/ui/PageLoader';
 import { exportExcel, exportPdf, type ExportColumn } from '@/lib/exportFiles';
 import {
   buildHistoryRows,
@@ -103,7 +104,7 @@ export function HistoryPage({ onNavigate }: ScreenProps) {
   const { profile } = useAuth();
   const { operatorName, selectedProductionId } = useProductionSelection();
   const { productions } = useProductions();
-  const { historial, placas, reoperaciones, recuperaciones, loading, error } = useProductionData(selectedProductionId);
+  const { historial, placas, reoperaciones, recuperaciones, loading, error, reload } = useProductionData(selectedProductionId);
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [placaSerie, setPlacaSerie] = useState<string | null>(null);
@@ -240,19 +241,14 @@ export function HistoryPage({ onNavigate }: ScreenProps) {
 
       <SelectedProductionBanner onNavigate={onNavigate} />
 
-      {error && (
-        <div role="alert" className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
+      <PageLoader loading={loading} error={error} onRetry={() => void reload()} hasData={allRows.length > 0}>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+          <KpiCard icon={RotateCcw} label="Reoperaciones" value={kpis.reop} tone="amber" />
+          <KpiCard icon={ShieldCheck} label="Recuperaciones" value={kpis.recuperaciones} tone="emerald" />
+          <KpiCard icon={ShieldCheck} label="Manuales" value={kpis.manuales} tone="navy" />
+          <KpiCard icon={ShieldCheck} label="Normales" value={kpis.normales} tone="slate" />
+          <KpiCard icon={Users} label="Placas afectadas" value={kpis.placasAfectadas} tone="navy" />
         </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <KpiCard icon={RotateCcw} label="Reoperaciones" value={kpis.reop} tone="amber" />
-        <KpiCard icon={ShieldCheck} label="Recuperaciones" value={kpis.recuperaciones} tone="emerald" />
-        <KpiCard icon={ShieldCheck} label="Manuales" value={kpis.manuales} tone="navy" />
-        <KpiCard icon={ShieldCheck} label="Normales" value={kpis.normales} tone="slate" />
-        <KpiCard icon={Users} label="Placas afectadas" value={kpis.placasAfectadas} tone="navy" />
-      </div>
 
       <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
         <FilterSelect label="Tipo" value={filters.tipo} onChange={(v) => setFilters({ ...filters, tipo: v })} options={TIPO_OPTIONS} />
@@ -320,6 +316,7 @@ export function HistoryPage({ onNavigate }: ScreenProps) {
           }
         />
       )}
+      </PageLoader>
 
       {placaSerie && <PlacaHistoryModal serie={placaSerie} rows={placaRows} onClose={() => setPlacaSerie(null)} />}
     </div>

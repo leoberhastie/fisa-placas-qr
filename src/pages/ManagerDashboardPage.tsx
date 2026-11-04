@@ -17,6 +17,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { DonutChart } from '@/components/metrics/DonutChart';
 import { useProductionSelection } from '@/context/ProductionSelectionContext';
 import { useProductionMetrics } from '@/hooks/useProductionMetrics';
+import { PageLoader } from '@/components/ui/PageLoader';
 import { useProductions } from '@/hooks/useProductions';
 import { exportExcel, exportPdf, type ExportMeta } from '@/lib/exportFiles';
 import { SERVICE_EXPORT_COLUMNS } from '@/lib/operationExportColumns';
@@ -86,18 +87,13 @@ export function ManagerDashboardPage({ onNavigate }: ScreenProps) {
 
       <DataUpdatedAlert produccionId={selectedProductionId} loadedVersion={dataVersion} onRefresh={handleRefreshData} />
 
-      {error && (
-        <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
       {selectedProductionId === null ? (
         <div className="rounded-2xl border border-dashed border-border bg-muted/50 px-6 py-12 text-center text-sm text-muted-foreground">
           Selecciona una producción para ver sus indicadores.
         </div>
       ) : (
-        <>
+        <PageLoader loading={loading} error={error} onRetry={handleRefreshData} hasData={!loading && !error}>
+          <>
           <section aria-label="Reoperaciones y recuperaciones" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard label="Reoperaciones pendientes" value={value(metrics.reoperacionesPendientes)} icon={AlertTriangle} tone="red" />
             <KpiCard label="Total histórico de reoperaciones" value={value(metrics.totalReoperaciones)} icon={RotateCcw} tone="navy" />
@@ -140,6 +136,7 @@ export function ManagerDashboardPage({ onNavigate }: ScreenProps) {
             )}
           </section>
         </>
+        </PageLoader>
       )}
     </div>
   );

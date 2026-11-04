@@ -15,6 +15,7 @@ import { SERVICE_EXPORT_COLUMNS } from '@/lib/operationExportColumns';
 import { productionDisplayLabel } from '@/types/domain';
 import { useProductionMetrics } from '@/hooks/useProductionMetrics';
 import { DataUpdatedAlert } from '@/components/import/DataUpdatedAlert';
+import { PageLoader } from '@/components/ui/PageLoader';
 import type { MetricStatus, ServiceMetrics } from '@/lib/operationMetrics';
 
 interface ScreenProps {
@@ -99,65 +100,61 @@ export function ServicesPage({ onNavigate }: ScreenProps) {
 
       <DataUpdatedAlert produccionId={selectedProductionId} loadedVersion={dataVersion} onRefresh={handleRefreshData} />
 
-      {error && (
-        <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
+      <PageLoader loading={loading} error={error} onRetry={handleRefreshData} hasData={services.length > 0}>
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center">
+          <label className="flex flex-1 flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Servicio
+            <select
+              value={servicioFilter}
+              onChange={(e) => setServicioFilter(e.target.value)}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-normal normal-case text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            >
+              <option value="todos">Todos los servicios</option>
+              {services.map((s) => (
+                <option key={s.servicio} value={s.servicio}>
+                  {s.servicio}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-1 flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Estado
+            <select
+              value={estadoFilter}
+              onChange={(e) => setEstadoFilter(e.target.value as EstadoFilter)}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-normal normal-case text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            >
+              {ESTADO_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-      )}
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center">
-        <label className="flex flex-1 flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Servicio
-          <select
-            value={servicioFilter}
-            onChange={(e) => setServicioFilter(e.target.value)}
-            className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-normal normal-case text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-          >
-            <option value="todos">Todos los servicios</option>
-            {services.map((s) => (
-              <option key={s.servicio} value={s.servicio}>
-                {s.servicio}
-              </option>
+        {services.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-muted/50 px-6 py-12 text-center text-sm text-muted-foreground">
+            Esta producción aún no tiene placas importadas.
+          </div>
+        ) : visibleServices.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-muted/50 px-6 py-12 text-center text-sm text-muted-foreground">
+            Ningún servicio coincide con los filtros seleccionados.
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {visibleServices.map((service) => (
+              <ServiceAccordionItem
+                key={service.servicio}
+                service={service}
+                isOpen={openServicio === service.servicio}
+                onToggle={() => setOpenServicio((current) => (current === service.servicio ? null : service.servicio))}
+                onOpenPanel={openPanel}
+              />
             ))}
-          </select>
-        </label>
-        <label className="flex flex-1 flex-col gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Estado
-          <select
-            value={estadoFilter}
-            onChange={(e) => setEstadoFilter(e.target.value as EstadoFilter)}
-            className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-normal normal-case text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-          >
-            {ESTADO_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {services.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-muted/50 px-6 py-12 text-center text-sm text-muted-foreground">
-          {loading ? 'Cargando datos...' : 'Esta producción aún no tiene placas importadas.'}
-        </div>
-      ) : visibleServices.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-muted/50 px-6 py-12 text-center text-sm text-muted-foreground">
-          Ningún servicio coincide con los filtros seleccionados.
-        </div>
-      ) : (
-        <ul className="space-y-3">
-          {visibleServices.map((service) => (
-            <ServiceAccordionItem
-              key={service.servicio}
-              service={service}
-              isOpen={openServicio === service.servicio}
-              onToggle={() => setOpenServicio((current) => (current === service.servicio ? null : service.servicio))}
-              onOpenPanel={openPanel}
-            />
-          ))}
-        </ul>
-      )}
+          </ul>
+        )}
+      </PageLoader>
 
       {panelService && selectedProductionId && (
         <BoxManagementPanel

@@ -15,6 +15,7 @@ import { ExportMenu } from '@/components/export/ExportMenu';
 import { exportExcel, exportPdf, type ExportMeta } from '@/lib/exportFiles';
 import { BOX_EXPORT_COLUMNS } from '@/lib/operationExportColumns';
 import { fetchServiceBoxPage, fetchServiceMetrics, type BoxMetricRow } from '@/services/metricsService';
+import { PageLoader } from '@/components/ui/PageLoader';
 import type { MetricStatus } from '@/lib/metricsTypes';
 
 interface ScreenProps {
