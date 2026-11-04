@@ -45,25 +45,25 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
       <button
         type="button"
         onClick={() => onNavigate('/produccion')}
-        className="mx-5 shrink-0 rounded-2xl border border-white/20 bg-white/5 px-2 py-2 text-left transition-colors hover:bg-white/10"
+        className="mx-5 shrink-0 rounded-2xl border border-white/20 bg-white/5 px-3 py-3 text-left transition-colors hover:bg-white/10"
         aria-label="Cambiar producción activa"
       >
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-sidebar-foreground/60">Producción activa</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/60">Producción activa</p>
             {loading ? (
               <p className="mt-2 truncate text-lg font-bold text-sidebar-foreground/70">Cargando...</p>
             ) : selectedProduction ? (
               <>
-                <p className="mt-2 truncate text-sm font-bold tracking-tight text-sidebar-foreground">
+                <p className="mt-2 truncate text-xs font-bold tracking-tight text-sidebar-foreground">
                   {productionDisplayLabel(selectedProduction)}
                 </p>
-                <span className="mt-2 inline-flex rounded-full bg-success/25 px-3 py-1 text-xs font-bold uppercase text-sidebar-primary">
+                <span className="mt-2 inline-flex rounded-full bg-success/25 px-3 py-1 text-[10px] font-bold uppercase text-sidebar-primary">
                   {selectedProduction.status === 'activa' ? 'Activa' : selectedProduction.status}
                 </span>
               </>
             ) : (
-              <p className="mt-2 text-xs font-semibold text-sidebar-foreground/70">Seleccionar producción</p>
+              <p className="mt-2 text-[10px] font-semibold text-sidebar-foreground/70">Seleccionar producción</p>
             )}
           </div>
           <ChevronDown className="h-5 w-5 shrink-0 text-sidebar-foreground/70" aria-hidden="true" />
