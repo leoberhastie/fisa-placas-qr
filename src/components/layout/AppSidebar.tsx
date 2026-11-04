@@ -99,8 +99,8 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
             {initials}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-bold text-sidebar-foreground">{userName}</p>
-            <p className="truncate text-sm uppercase tracking-wide text-sidebar-primary">{ROLE_LABELS[role]}</p>
+            <p className="truncate text-xs font-bold text-sidebar-foreground">{userName}</p>
+            <p className="truncate text-xs uppercase tracking-wide text-sidebar-primary">{ROLE_LABELS[role]}</p>
           </div>
           <button
             type="button"
