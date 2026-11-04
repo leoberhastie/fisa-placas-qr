@@ -113,8 +113,8 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
           </button>
         </div>
         <div className="mt-5 border-t border-white/15 pt-4 text-center">
-          <p className="text-xs text-sidebar-foreground/45">Creado por Calidad</p>
-          <p className="mt-1 text-xs text-sidebar-foreground/55">Ing. Leober Reyes Hastie</p>
+          <p className="text-xs text-sidebar-foreground/35">Creado por Calidad</p>
+          <p className="mt-1 text-xs text-sidebar-foreground/45">Ing. Leober Reyes Hastie</p>
         </div>
       </div>
     </div>
