@@ -45,7 +45,7 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
       <button
         type="button"
         onClick={() => onNavigate('/produccion')}
-        className="mx-5 shrink-0 rounded-2xl border border-white/20 bg-white/5 px-4 py-4 text-left transition-colors hover:bg-white/10"
+        className="mx-5 shrink-0 rounded-2xl border border-white/20 bg-white/5 px-2 py-2 text-left transition-colors hover:bg-white/10"
         aria-label="Cambiar producción activa"
       >
         <div className="flex items-center justify-between gap-3">
@@ -55,7 +55,7 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
               <p className="mt-2 truncate text-lg font-bold text-sidebar-foreground/70">Cargando...</p>
             ) : selectedProduction ? (
               <>
-                <p className="mt-2 truncate text-base font-bold tracking-tight text-sidebar-foreground">
+                <p className="mt-2 truncate text-sm font-bold tracking-tight text-sidebar-foreground">
                   {productionDisplayLabel(selectedProduction)}
                 </p>
                 <span className="mt-2 inline-flex rounded-full bg-success/25 px-3 py-1 text-xs font-bold uppercase text-sidebar-primary">
