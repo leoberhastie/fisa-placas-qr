@@ -84,7 +84,7 @@ export function AppShell({ routes, activePath, onNavigate, role, userName, child
         </div>
       </header>
 
-      <div className="lg:pl-64">
+      <div className="lg:pl-72">
         <header className="sticky top-0 z-20 hidden h-16 items-center border-b border-border bg-card/95 px-8 backdrop-blur lg:flex">
           <p className="font-heading text-base font-semibold text-primary">{activeRoute?.label ?? 'Operación'}</p>
         </header>
