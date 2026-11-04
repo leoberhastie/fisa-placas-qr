@@ -67,7 +67,6 @@ export function LoginScreen() {
               <p className="text-sm leading-relaxed text-muted-foreground">
                 Ingresa con el usuario y la contraseña asignados a tu puesto.
               </p>
-              <p className="pt-2 text-xs font-medium text-muted-foreground">Creado por Calidad · Ing. Leober Reyes Hastie</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5" noValidate>
