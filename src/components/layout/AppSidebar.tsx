@@ -58,10 +58,10 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
                 <p className="mt-2 truncate text-xs font-bold tracking-tight text-sidebar-foreground">
                   {productionDisplayLabel(selectedProduction)}
                   <span className=" inline-flex rounded-full bg-success/25 px-3 py-1 text-[10px] font-bold uppercase text-sidebar-primary">
-                </p>
-                
                   {selectedProduction.status === 'activa' ? 'Activa' : selectedProduction.status}
                 </span>
+                </p>
+                
               </>
             ) : (
               <p className="mt-2 text-[10px] font-semibold text-sidebar-foreground/70">Seleccionar producción</p>
