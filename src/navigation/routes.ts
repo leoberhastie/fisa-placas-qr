@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   ClipboardList,
   FileBarChart,
   Gauge,
@@ -30,6 +31,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/cajas', label: 'Cajas con reoperaciones', shortLabel: 'Cajas', icon: Package, roles: ['admin', 'operador', 'gerente'] },
   { path: '/historial', label: 'Historial', shortLabel: 'Historial', icon: History, roles: ['admin', 'operador', 'gerente'] },
   { path: '/reportes', label: 'Reportes', shortLabel: 'Reportes', icon: FileBarChart, roles: ['admin', 'gerente'] },
+  { path: '/manual', label: 'Manual de usuario', shortLabel: 'Manual', icon: BookOpen, roles: ['admin', 'operador', 'gerente'] },
 ];
 
 export const HOME_ROUTE_BY_ROLE: Record<UserRole, string> = {

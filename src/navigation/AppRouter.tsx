@@ -5,6 +5,7 @@ import { useHashPath } from '@/hooks/useHashPath';
 import { AdminPanelPage } from '@/pages/AdminPanelPage';
 import { BoxesPage } from '@/pages/BoxesPage';
 import { HistoryPage } from '@/pages/HistoryPage';
+import { ManualPage } from '@/pages/ManualPage';
 import { ManagerDashboardPage } from '@/pages/ManagerDashboardPage';
 import { QrReaderPage } from '@/pages/QrReaderPage';
 import { ReoperationsPage } from '@/pages/ReoperationsPage';
@@ -29,6 +30,7 @@ const SCREEN_BY_PATH: Record<string, ComponentType<ScreenProps>> = {
   '/cajas': BoxesPage,
   '/historial': HistoryPage,
   '/reportes': ReportsPage,
+  '/manual': ManualPage,
 };
 
 interface AppRouterProps {
