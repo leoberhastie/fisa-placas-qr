@@ -36,7 +36,7 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
             <img src="/assets/logos/image%20copy%202.png" alt="FISA-PLACAS" className="h-full w-full object-contain" />
           </div>
           <div className="min-w-0">
-            <p className="font-heading text-[21px] font-bold leading-none tracking-tight text-sidebar-foreground">FISA-PLACAS</p>
+            <p className="font-heading text-[21px] font-bold leading-none tracking-tight text-sidebar-foreground">FSA-PLACAS</p>
             <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-sidebar-foreground/60">Reoperaciones</p>
           </div>
         </div>
