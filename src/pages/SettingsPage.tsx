@@ -2,6 +2,7 @@ import { Factory, FileSpreadsheet, History, Package, Settings as SettingsIcon, Q
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ChangePasswordForm } from '@/components/settings/ChangePasswordForm';
 import { QrReaderConfigSection } from '@/components/settings/QrReaderConfigSection';
+import { ResetProductionDataSection } from '@/components/settings/ResetProductionDataSection';
 import { ExcelImportSection } from '@/components/import/ExcelImportSection';
 import { ServiceBoxImportList } from '@/components/import/ServiceBoxImportList';
 import { ProductionsPanel } from '@/components/productions/ProductionsPanel';
@@ -117,6 +118,8 @@ export function SettingsPage() {
           </div>
         </SectionCard>
       )}
+
+      <ResetProductionDataSection />
 
       <QrReaderConfigSection />
 

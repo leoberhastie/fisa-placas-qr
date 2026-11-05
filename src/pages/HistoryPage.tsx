@@ -159,7 +159,7 @@ export function HistoryPage({ onNavigate }: ScreenProps) {
     const placa = placas.find((p) => p.serie === placaSerie) ?? null;
     const reops = placa ? reoperaciones.filter((r) => r.placa_id === placa.id) : [];
     const recups = placa ? recuperaciones.filter((r) => r.placa_id === placa.id) : [];
-    const cajaPlacas = placa ? placas.filter((p) => p.numero_caja === placa.numero_caja) : [];
+    const cajaPlacas = placa ? placas.filter((p) => p.numero_caja === placa.numero_caja && p.servicio === placa.servicio) : [];
     return { placa, reops, recups, cajaPlacas };
   }, [placaSerie, placas, reoperaciones, recuperaciones]);
 
