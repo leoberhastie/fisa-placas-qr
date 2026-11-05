@@ -7,7 +7,6 @@ import {
   ListChecks,
   Loader2,
   RotateCcw,
-  X,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
@@ -19,12 +18,14 @@ import {
 } from '@/types/domain';
 import {
   createReoperacionesBatch,
+  getServiceParcialidadInfo,
   insertHistorialBatch,
   listPlacasByBox,
   listServiceBoxes,
   type ReoperationInput,
   type HistorialInput,
   type ServiceBox,
+  type ServiceParcialidadInfo,
 } from '@/services/operationService';
 import { listServiceSummaries, type ServiceSummary } from '@/services/serviceBoxImportService';
 
@@ -87,6 +88,7 @@ export function BatchReoperationPanel({
   const [proceso, setProceso] = useState<ReoperationProcess>(REOPERATION_PROCESSES[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [parcialidadInfo, setParcialidadInfo] = useState<ServiceParcialidadInfo | null>(null);
 
   // Load services on open + restore persisted service/caja
   useEffect(() => {
@@ -111,6 +113,7 @@ export function BatchReoperationPanel({
     if (!open || !servicio || !produccionId) return;
     setBoxesLoading(true);
     setBoxes([]);
+    setParcialidadInfo(null);
     setNumeroCaja((current) => {
       // keep persisted caja if it might belong to this service; validate after load
       return current;
@@ -125,6 +128,9 @@ export function BatchReoperationPanel({
       })
       .catch(() => setError('No se pudieron cargar las cajas del servicio.'))
       .finally(() => setBoxesLoading(false));
+    getServiceParcialidadInfo(produccionId, servicio)
+      .then(setParcialidadInfo)
+      .catch(() => {});
   }, [open, produccionId, servicio]);
 
   // Load placas when box is selected
@@ -279,6 +285,32 @@ export function BatchReoperationPanel({
               />
             )}
           </div>
+
+          {/* Parcialidad info */}
+          {servicio && parcialidadInfo && (
+            <div className="rounded-lg border border-accent/20 bg-accent/5 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm">
+                <span className="font-semibold text-primary">
+                  {parcialidadInfo.total_parcialidades > 0
+                    ? `P${parcialidadInfo.total_parcialidades} (${parcialidadInfo.total_parcialidades} parcialidad(es))`
+                    : 'Sin cajas asignadas'}
+                </span>
+                <span className="text-muted-foreground">
+                  {parcialidadInfo.total_cajas_asignadas} cajas asignadas
+                </span>
+                <span className="text-muted-foreground">
+                  {parcialidadInfo.total_placas_asignadas} / {parcialidadInfo.total_placas_servicio} placas
+                </span>
+                {parcialidadInfo.placas_faltantes > 0 ? (
+                  <span className="font-medium text-warning">
+                    Faltan {parcialidadInfo.placas_faltantes} placas (~{parcialidadInfo.cajas_faltantes_estimadas} cajas)
+                  </span>
+                ) : (
+                  <span className="font-medium text-success">Servicio completo</span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Step 2: Caja */}
           {servicio && (

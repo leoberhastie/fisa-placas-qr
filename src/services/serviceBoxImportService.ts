@@ -257,22 +257,6 @@ function hasOverlappingConsecutivoRanges(rows: PreviewRow[]): boolean {
 }
 
 const BOX_BATCH_SIZE = 100;
-const RESET_PLATE_BATCH_SIZE = 20000;
-
-async function resetServiceBoxAssignments(produccionId: string, servicio: string): Promise<void> {
-  let remaining = 1;
-  while (remaining > 0) {
-    const { data, error } = await supabase.rpc('reset_service_box_assignments', {
-      p_produccion_id: produccionId,
-      p_servicio: servicio,
-      p_limit: RESET_PLATE_BATCH_SIZE,
-    });
-    if (error || typeof data !== 'number') {
-      throw new Error(`No se pudieron limpiar las cajas anteriores del servicio. ${error?.message ?? ''}`.trim());
-    }
-    remaining = data;
-  }
-}
 
 export async function assignServiceBoxes(
   produccionId: string,
