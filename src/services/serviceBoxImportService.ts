@@ -16,6 +16,8 @@ export interface ServiceBoxImportResult {
   cajas: number;
   series: number;
   placas: number;
+  parcialidad?: number;
+  es_parcial?: boolean;
 }
 
 export interface ServiceBoxImportProgress {
@@ -270,6 +272,8 @@ export async function assignServiceBoxes(
   const totalBatches = Math.ceil(validRows.length / BOX_BATCH_SIZE);
   let totalSeries = 0;
   let totalPlates = 0;
+  let lastParcialidad: number | undefined;
+  let lastEsParcial: boolean | undefined;
 
   for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
     const batch = validRows.slice(batchIndex * BOX_BATCH_SIZE, (batchIndex + 1) * BOX_BATCH_SIZE);
@@ -294,6 +298,8 @@ export async function assignServiceBoxes(
     const result = data[0] as ServiceBoxImportResult;
     totalSeries += result.series;
     totalPlates += result.placas;
+    if (result.parcialidad !== undefined) lastParcialidad = result.parcialidad;
+    if (result.es_parcial !== undefined) lastEsParcial = result.es_parcial;
     onProgress?.({
       batchIndex: batchIndex + 1,
       totalBatches,
@@ -302,5 +308,5 @@ export async function assignServiceBoxes(
     });
   }
 
-  return { cajas: validRows.length, series: totalSeries, placas: totalPlates };
+  return { cajas: validRows.length, series: totalSeries, placas: totalPlates, parcialidad: lastParcialidad, es_parcial: lastEsParcial };
 }

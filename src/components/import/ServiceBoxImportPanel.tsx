@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { AlertCircle, CheckCircle2, FileSpreadsheet, Loader2, Upload, ArrowRight, Eye } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileSpreadsheet, Loader2, Upload, ArrowRight, Eye, Layers, AlertTriangle } from 'lucide-react';
 import {
   assignServiceBoxes,
   getAutoMapping,
@@ -12,6 +12,7 @@ import {
   type ServiceBoxImportRow,
 } from '@/services/serviceBoxImportService';
 import type { ServiceType } from '@/types/domain';
+import { getServiceParcialidadInfo, type ServiceParcialidadInfo } from '@/services/operationService';
 
 interface ServiceBoxImportPanelProps {
   productionId: string;
@@ -49,6 +50,8 @@ export function ServiceBoxImportPanel({ productionId, servicio, tipo, onImported
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<ServiceBoxImportProgress | null>(null);
   const [saving, setSaving] = useState(false);
+  const [parcialidadInfo, setParcialidadInfo] = useState<ServiceParcialidadInfo | null>(null);
+  const [parcialidadLoading, setParcialidadLoading] = useState(false);
 
   const handleFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -57,6 +60,7 @@ export function ServiceBoxImportPanel({ productionId, servicio, tipo, onImported
     setMessage(null);
     setPreview(null);
     setProgress(null);
+    setParcialidadInfo(null);
     setReading(true);
     try {
       const fileHeaders = await extractHeaders(file);
@@ -139,11 +143,16 @@ export function ServiceBoxImportPanel({ productionId, servicio, tipo, onImported
     setSaving(true);
     setError(null);
     setProgress(null);
+    setParcialidadInfo(null);
     try {
       const result = await assignServiceBoxes(productionId, servicio, tipo, rows, fileName, setProgress);
       setMessage(`${result.cajas} cajas asignadas: ${result.series} series y ${result.placas} placas físicas.`);
       resetToIdle();
       onImported();
+      setParcialidadLoading(true);
+      const info = await getServiceParcialidadInfo(productionId, servicio);
+      setParcialidadInfo(info);
+      setParcialidadLoading(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo guardar la asignación de cajas.');
     } finally {
@@ -196,6 +205,8 @@ export function ServiceBoxImportPanel({ productionId, servicio, tipo, onImported
       {previewing && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Verificando series contra las placas del servicio...</p>}
       {saving && progress && <BoxImportProgress progress={progress} />}
       {message && <p className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm text-success"><CheckCircle2 className="h-4 w-4" />{message}</p>}
+      {parcialidadLoading && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Calculando parcialidad...</p>}
+      {parcialidadInfo && !parcialidadLoading && <ParcialidadAlert info={parcialidadInfo} />}
       {error && <p className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"><AlertCircle className="h-4 w-4" />{error}</p>}
 
       {step === 'mapping' && headers.length > 0 && mapping && (
@@ -388,6 +399,33 @@ function formatPreviewError(error: string | null): string {
 
 function SummaryStat({ label, value }: { label: string; value: number }) {
   return <div><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-semibold tabular-nums text-primary">{value.toLocaleString('es-MX')}</p></div>;
+}
+
+function ParcialidadAlert({ info }: { info: ServiceParcialidadInfo }) {
+  if (info.es_completo) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
+        <Layers className="h-4 w-4 shrink-0" />
+        <span>
+          Parcialidad P{info.total_parcialidades} — Servicio completo. {info.total_placas_asignadas.toLocaleString('es-MX')} de {info.total_placas_servicio.toLocaleString('es-MX')} placas asignadas en {info.total_cajas_asignadas.toLocaleString('es-MX')} cajas.
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-1.5 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+      <p className="flex items-center gap-2 font-semibold">
+        <AlertTriangle className="h-4 w-4 shrink-0" />
+        Parcialidad P{info.total_parcialidades} — Asignación parcial
+      </p>
+      <p className="text-xs leading-relaxed">
+        {info.total_placas_asignadas.toLocaleString('es-MX')} de {info.total_placas_servicio.toLocaleString('es-MX')} placas asignadas en {info.total_cajas_asignadas.toLocaleString('es-MX')} cajas.
+      </p>
+      <p className="text-xs font-semibold">
+        Faltan {info.placas_faltantes.toLocaleString('es-MX')} placas (~{info.cajas_faltantes_estimadas.toLocaleString('es-MX')} cajas). Sube otro archivo para completar el servicio.
+      </p>
+    </div>
+  );
 }
 
 function BoxImportProgress({ progress }: { progress: ServiceBoxImportProgress }) {
