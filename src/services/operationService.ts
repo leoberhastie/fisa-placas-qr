@@ -85,6 +85,36 @@ export async function findPlaca(
   return (data as Placa) ?? null;
 }
 
+export interface ServiceBox {
+  numero_caja: string;
+  placas: number;
+}
+
+export async function listServiceBoxes(produccionId: string, servicio: string): Promise<ServiceBox[]> {
+  const { data, error } = await supabase.rpc('list_service_boxes', {
+    p_produccion_id: produccionId,
+    p_servicio: servicio,
+  });
+  if (error || !Array.isArray(data)) throw new Error('No se pudieron cargar las cajas del servicio.');
+  return data.map((row) => ({ numero_caja: String(row.numero_caja), placas: Number(row.placas) }));
+}
+
+export async function listPlacasByBox(produccionId: string, servicio: string, numeroCaja: string): Promise<Placa[]> {
+  return fetchAllPages<Placa>(
+    (from, to) =>
+      supabase
+        .from('placas')
+        .select(PLACA_COLUMNS)
+        .eq('produccion_id', produccionId)
+        .eq('servicio', servicio)
+        .eq('numero_caja', numeroCaja)
+        .order('consecutivo', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to),
+    'No se pudieron cargar las placas de la caja.',
+  );
+}
+
 // =========================================================
 // REOPERACIONES
 // =========================================================
@@ -140,6 +170,22 @@ export async function updateReoperationEstado(
     .update({ estado: nuevoEstado })
     .eq('id', reoperacionId);
   if (error) throw new Error('No se pudo actualizar el estado de la reoperación.');
+}
+
+export async function createReoperacionesBatch(inputs: ReoperationInput[]): Promise<void> {
+  if (inputs.length === 0) return;
+  const { error } = await supabase.from('reoperaciones').insert(
+    inputs.map((input) => ({
+      produccion_id: input.produccion_id,
+      placa_id: input.placa_id,
+      proceso: input.proceso,
+      operador: input.operador,
+      usuario: input.usuario,
+      estado: input.estado,
+      observaciones: input.observaciones,
+    })),
+  );
+  if (error) throw new Error('No se pudieron registrar las reoperaciones.');
 }
 
 export async function listReoperacionesByPlaca(placaId: string): Promise<Reoperation[]> {
@@ -301,6 +347,24 @@ export async function listHistorialByPlaca(placaId: string): Promise<HistorialOp
     .order('fecha_hora', { ascending: false });
   if (error) throw new Error('No se pudo cargar el historial de la placa.');
   return (data ?? []) as HistorialOperacion[];
+}
+
+export async function insertHistorialBatch(inputs: HistorialInput[]): Promise<void> {
+  if (inputs.length === 0) return;
+  const { error } = await supabase.from('historial_operaciones').insert(
+    inputs.map((input) => ({
+      produccion_id: input.produccion_id,
+      placa_id: input.placa_id,
+      tipo_operacion: input.tipo_operacion,
+      proceso: input.proceso,
+      operador: input.operador,
+      usuario: input.usuario,
+      estado_anterior: input.estado_anterior,
+      estado_nuevo: input.estado_nuevo,
+      observaciones: input.observaciones,
+    })),
+  );
+  if (error) throw new Error('No se pudo registrar en el historial.');
 }
 
 export async function insertHistorial(input: HistorialInput): Promise<void> {

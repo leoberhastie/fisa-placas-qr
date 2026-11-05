@@ -3,7 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 
 export type ScannerState = 'idle' | 'starting' | 'scanning' | 'error' | 'stopped';
 
-export interface CameraDevice {
+interface CameraDevice {
   id: string;
   label: string;
 }
@@ -11,12 +11,22 @@ export interface CameraDevice {
 interface UseQrScannerOptions {
   onScan: (decodedText: string) => void;
   enabled: boolean;
-  /** Lock to prevent duplicate scans of the same QR while modal is open.
-   *  When locked becomes true the camera is paused; when it returns to false
-   *  (and enabled is true) the camera resumes automatically. */
+  /** While locked the camera is paused; it resumes automatically when unlocked. */
   locked: boolean;
-  /** Preferred camera: 'rear' or 'front' */
   cameraFacing?: 'rear' | 'front';
+}
+
+const BACK_CAMERA_PATTERN = /back|rear|environment|trasera|posterior/i;
+const FRONT_CAMERA_PATTERN = /front|user|delantera|frontal/i;
+const SECONDARY_LENS_PATTERN = /ultra|wide|macro|tele|depth|infrared|\bir\b/i;
+
+function pickPreferredCamera(cameras: CameraDevice[], facing: 'rear' | 'front'): CameraDevice | undefined {
+  if (facing === 'front') {
+    return cameras.find((c) => FRONT_CAMERA_PATTERN.test(c.label)) ?? cameras[0];
+  }
+  const backCameras = cameras.filter((c) => BACK_CAMERA_PATTERN.test(c.label));
+  const mainBack = backCameras.find((c) => !SECONDARY_LENS_PATTERN.test(c.label));
+  return mainBack ?? backCameras[0] ?? cameras[cameras.length - 1];
 }
 
 export function useQrScanner({ onScan, enabled, locked, cameraFacing = 'rear' }: UseQrScannerOptions) {
@@ -24,12 +34,10 @@ export function useQrScanner({ onScan, enabled, locked, cameraFacing = 'rear' }:
   const containerId = 'qr-reader-container';
   const [state, setState] = useState<ScannerState>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [cameras, setCameras] = useState<CameraDevice[]>([]);
-  const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
   const onScanRef = useRef(onScan);
   const lockedRef = useRef(locked);
+  const enabledRef = useRef(false);
   const activeCameraIdRef = useRef<string | null>(null);
-  const enabledRef = useRef(enabled);
 
   useEffect(() => {
     onScanRef.current = onScan;
@@ -39,77 +47,62 @@ export function useQrScanner({ onScan, enabled, locked, cameraFacing = 'rear' }:
     lockedRef.current = locked;
   }, [locked]);
 
-  useEffect(() => {
-    enabledRef.current = enabled;
-  }, [enabled]);
-
-  useEffect(() => {
-    activeCameraIdRef.current = activeCameraId;
-  }, [activeCameraId]);
-
   const stopScanner = useCallback(async () => {
-    if (scannerRef.current) {
+    const scanner = scannerRef.current;
+    scannerRef.current = null;
+    if (scanner) {
       try {
-        const s = scannerRef.current;
-        if (s.isScanning) {
-          await s.stop();
-        }
-        await s.clear();
+        if (scanner.isScanning) await scanner.stop();
+        await scanner.clear();
       } catch {
-        // ignore stop errors
+        // the browser may already have released the camera
       }
-      scannerRef.current = null;
     }
     setState('stopped');
   }, []);
 
-  const startScanner = useCallback(
-    async (cameraId: string) => {
-      if (!enabledRef.current) return;
-      setState('starting');
-      setError(null);
+  const startScanner = useCallback(async (cameraId: string) => {
+    if (!enabledRef.current) return;
+    setState('starting');
+    setError(null);
 
-      try {
-        if (!scannerRef.current) {
-          scannerRef.current = new Html5Qrcode(containerId, { verbose: false });
-        }
+    try {
+      const scanner = new Html5Qrcode(containerId, { verbose: false });
+      scannerRef.current = scanner;
 
-        await scannerRef.current.start(
-          cameraId,
-          {
-            fps: 15,
-            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-              const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.7);
-              return { width: Math.max(160, edge), height: Math.max(160, edge) };
-            },
-            aspectRatio: 1.0,
-            disableFlip: false,
+      await scanner.start(
+        cameraId,
+        {
+          fps: 15,
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.7);
+            return { width: Math.max(160, edge), height: Math.max(160, edge) };
           },
-          (decodedText: string) => {
-            if (!lockedRef.current) {
-              onScanRef.current(decodedText);
-            }
-          },
-          () => {
-            // ignore per-frame decode errors
-          },
-        );
+          aspectRatio: 1.0,
+        },
+        (decodedText: string) => {
+          if (!lockedRef.current) onScanRef.current(decodedText);
+        },
+        () => {
+          // per-frame decode misses are expected
+        },
+      );
 
-        setState('scanning');
-        setActiveCameraId(cameraId);
-      } catch (err) {
-        setState('error');
-        const msg = err instanceof Error ? err.message : 'No se pudo iniciar la cámara.';
-        setError(msg);
+      if (!enabledRef.current) {
+        await stopScanner();
+        return;
       }
-    },
-    [],
-  );
+      activeCameraIdRef.current = cameraId;
+      setState('scanning');
+    } catch (err) {
+      setState('error');
+      setError(err instanceof Error ? err.message : 'No se pudo iniciar la cámara.');
+    }
+  }, [stopScanner]);
 
-  // Enumerate cameras and start with rear camera
   useEffect(() => {
     if (!enabled) return;
-
+    enabledRef.current = true;
     let cancelled = false;
 
     (async () => {
@@ -122,15 +115,8 @@ export function useQrScanner({ onScan, enabled, locked, cameraFacing = 'rear' }:
           return;
         }
         const mapped: CameraDevice[] = devices.map((d) => ({ id: d.id, label: d.label || `Cámara ${d.id.slice(0, 6)}` }));
-        setCameras(mapped);
-
-        // Prefer rear/back camera
-        const rear = cameraFacing === 'front'
-          ? mapped.find((c) => /front|user|delantera|frontal/i.test(c.label))
-          : mapped.find((c) => /back|rear|environment|trasera|posterior/i.test(c.label));
-        const fallback = cameraFacing === 'front' ? mapped[0] : mapped[mapped.length - 1];
-        const preferred = rear?.id ?? fallback?.id ?? mapped[0].id;
-        await startScanner(preferred);
+        const preferred = pickPreferredCamera(mapped, cameraFacing);
+        if (preferred) await startScanner(preferred.id);
       } catch (err) {
         if (cancelled) return;
         setState('error');
@@ -144,45 +130,28 @@ export function useQrScanner({ onScan, enabled, locked, cameraFacing = 'rear' }:
 
     return () => {
       cancelled = true;
+      enabledRef.current = false;
       void stopScanner();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled]);
 
-  // Pause camera when locked (a scan was just decoded); resume when unlocked.
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !activeCameraIdRef.current) return;
     if (locked) {
       void stopScanner();
-    } else if (activeCameraIdRef.current) {
+    } else {
       void startScanner(activeCameraIdRef.current);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locked, enabled]);
-
-  const switchCamera = useCallback(
-    async (cameraId: string) => {
-      await stopScanner();
-      await startScanner(cameraId);
-    },
-    [startScanner, stopScanner],
-  );
+  }, [locked]);
 
   const restart = useCallback(async () => {
-    if (activeCameraIdRef.current) {
-      await stopScanner();
-      await startScanner(activeCameraIdRef.current);
-    }
+    const cameraId = activeCameraIdRef.current;
+    if (!cameraId) return;
+    await stopScanner();
+    await startScanner(cameraId);
   }, [startScanner, stopScanner]);
 
-  return {
-    containerId,
-    state,
-    error,
-    cameras,
-    activeCameraId,
-    switchCamera,
-    stopScanner,
-    restart,
-  };
+  return { containerId, state, error, restart };
 }
