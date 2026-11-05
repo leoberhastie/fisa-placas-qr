@@ -154,6 +154,15 @@ export function HistoryPage({ onNavigate }: ScreenProps) {
     [allRows, placaSerie],
   );
 
+  const placaData = useMemo(() => {
+    if (!placaSerie) return null;
+    const placa = placas.find((p) => p.serie === placaSerie) ?? null;
+    const reops = placa ? reoperaciones.filter((r) => r.placa_id === placa.id) : [];
+    const recups = placa ? recuperaciones.filter((r) => r.placa_id === placa.id) : [];
+    const cajaPlacas = placa ? placas.filter((p) => p.numero_caja === placa.numero_caja) : [];
+    return { placa, reops, recups, cajaPlacas };
+  }, [placaSerie, placas, reoperaciones, recuperaciones]);
+
   const filtersActive = JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS);
   const produccionLabel = selected ? productionDisplayLabel(selected) : '—';
 
@@ -318,7 +327,17 @@ export function HistoryPage({ onNavigate }: ScreenProps) {
       )}
       </PageLoader>
 
-      {placaSerie && <PlacaHistoryModal serie={placaSerie} rows={placaRows} onClose={() => setPlacaSerie(null)} />}
+      {placaSerie && placaData && (
+        <PlacaHistoryModal
+          serie={placaSerie}
+          rows={placaRows}
+          placa={placaData.placa}
+          reoperaciones={placaData.reops}
+          recuperaciones={placaData.recups}
+          cajaPlacas={placaData.cajaPlacas}
+          onClose={() => setPlacaSerie(null)}
+        />
+      )}
     </div>
   );
 }
