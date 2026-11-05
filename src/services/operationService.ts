@@ -142,6 +142,16 @@ export async function updateReoperationEstado(
   if (error) throw new Error('No se pudo actualizar el estado de la reoperación.');
 }
 
+export async function listReoperacionesByPlaca(placaId: string): Promise<Reoperation[]> {
+  const { data, error } = await supabase
+    .from('reoperaciones')
+    .select(REOPERACION_COLUMNS)
+    .eq('placa_id', placaId)
+    .order('fecha_hora', { ascending: false });
+  if (error) throw new Error('No se pudieron cargar las reoperaciones de la placa.');
+  return (data ?? []) as Reoperation[];
+}
+
 export async function getReoperacionById(
   reoperacionId: string,
 ): Promise<Reoperation | null> {

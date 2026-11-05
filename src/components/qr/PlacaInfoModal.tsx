@@ -8,6 +8,7 @@ export interface PlacaInfo {
   placa: Placa | null;
   reopsCount: number;
   recuperacionesCount: number;
+  hasPendingReoperation: boolean;
   parsed: ParsedQrData;
   notFound: boolean;
 }
@@ -158,7 +159,8 @@ export function PlacaInfoModal({
             <button
               type="button"
               onClick={() => setMode('recuperacion_form')}
-              disabled={info.notFound}
+              disabled={info.notFound || !info.hasPendingReoperation}
+              title={!info.hasPendingReoperation ? 'No hay reoperaciones pendientes para esta placa' : undefined}
               className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-success px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-success disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ShieldCheck className="h-4 w-4" />

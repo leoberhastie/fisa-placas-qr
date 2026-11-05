@@ -5,8 +5,8 @@ import {
   CameraOff,
   CheckCircle2,
   ClipboardList,
-  Loader2,
   Keyboard,
+  Loader2,
   QrCode,
   RefreshCw,
   RotateCw,
@@ -26,14 +26,20 @@ import { useProductionData } from '@/hooks/useProductionData';
 import { useQrScanner } from '@/hooks/useQrScanner';
 import { parseQrContent } from '@/services/qrService';
 import { loadQrReaderConfig, playBeep, vibrate, type QrReaderConfig } from '@/lib/qrConfig';
-import { findPlaca, createReoperation, createRecuperacion, insertHistorial, listReoperacionesByProduction, listRecuperacionesByProduction } from '@/services/operationService';
+import {
+  findPlaca,
+  listReoperacionesByPlaca,
+  listRecuperacionesByProduction,
+  createReoperation,
+  createRecuperacion,
+  insertHistorial,
+  listReoperacionesByProduction,
+} from '@/services/operationService';
 import { type PlatePosition } from '@/types/domain';
 
 interface ScreenProps {
   onNavigate: (path: string) => void;
 }
-
-
 
 export function QrReaderPage({ onNavigate }: ScreenProps) {
   const { profile, session } = useAuth();
@@ -61,7 +67,6 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
   const displayName = operatorName ?? profile?.full_name ?? profile?.email ?? '—';
   const roleLabel = profile ? (profile.role === 'admin' ? 'Administrador' : profile.role === 'gerente' ? 'Gerente' : 'Operador') : '';
 
-  // Load totals for active production
   const loadTotals = useCallback(async () => {
     if (!selectedProductionId) return;
     try {
@@ -83,7 +88,7 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
   // Handle QR scan
   const handleScan = useCallback(
     async (decodedText: string) => {
-      if (modalLock) return; // avoid duplicates while modal is open
+      if (modalLock) return;
       if (!selectedProductionId) return;
 
       if (qrConfig.soundEnabled) playBeep();
@@ -97,6 +102,7 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
           placa: null,
           reopsCount: 0,
           recuperacionesCount: 0,
+          hasPendingReoperation: false,
           parsed,
           notFound: true,
         });
@@ -115,19 +121,20 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
             placa: null,
             reopsCount: 0,
             recuperacionesCount: 0,
+            hasPendingReoperation: false,
             parsed,
             notFound: true,
           });
         } else {
-          // Count previous operations for this placa
-          const allReops = await listReoperacionesByProduction(selectedProductionId);
+          const placaReops = await listReoperacionesByPlaca(placa.id);
           const allRecups = await listRecuperacionesByProduction(selectedProductionId);
-          const placaReops = allReops.filter((r) => r.placa_id === placa.id).length;
           const placaRecups = allRecups.filter((r) => r.placa_id === placa.id).length;
+          const hasPending = placaReops.some((r) => r.estado === 'pendiente');
           setModalInfo({
             placa,
-            reopsCount: placaReops,
+            reopsCount: placaReops.length,
             recuperacionesCount: placaRecups,
+            hasPendingReoperation: hasPending,
             parsed,
             notFound: false,
           });
@@ -137,6 +144,7 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
           placa: null,
           reopsCount: 0,
           recuperacionesCount: 0,
+          hasPendingReoperation: false,
           parsed,
           notFound: true,
         });
@@ -170,7 +178,6 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
         setAutoProgress(0);
         setModalInfo(null);
         setModalLock(false);
-        // Restart scanner
         void restart();
       }
     }, 50);
@@ -187,13 +194,12 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
     setAutoProgress(0);
   }, []);
 
-  // Register operations
   const submittingRef = useRef(false);
 
   const handleRegisterReoperation = useCallback(
     async (placaId: string | null, proceso: string, observaciones: string) => {
       if (!selectedProductionId) return;
-      if (submittingRef.current) return; // guard against double-click / repeated QR
+      if (submittingRef.current) return;
       submittingRef.current = true;
       try {
         await createReoperation({
@@ -226,7 +232,7 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
         submittingRef.current = false;
       }
     },
-    [selectedProductionId, displayName, session, loadTotals, reload, mode, startAutoCountdown],
+    [selectedProductionId, displayName, session, loadTotals, reload, mode, startAutoCountdown, qrConfig.autoScanDelayMs],
   );
 
   const handleRegisterRecuperacion = useCallback(
@@ -264,10 +270,9 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
         submittingRef.current = false;
       }
     },
-    [selectedProductionId, displayName, session, loadTotals, reload, mode, startAutoCountdown],
+    [selectedProductionId, displayName, session, loadTotals, reload, mode, startAutoCountdown, qrConfig.autoScanDelayMs],
   );
 
-  // Manual search
   const handleManualSearch = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedProductionId || !manualSerie.trim() || !manualPosicion) return;
@@ -281,20 +286,22 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
           placa: null,
           reopsCount: 0,
           recuperacionesCount: 0,
+          hasPendingReoperation: false,
           parsed: { serie: manualSerie.trim(), posicion: manualPosicion, posicionNormalizada: manualPosicion, complementaria: '', raw: '' },
           notFound: true,
         });
       } else {
-        const allReops = await listReoperacionesByProduction(selectedProductionId);
+        const placaReops = await listReoperacionesByPlaca(placa.id);
         const allRecups = await listRecuperacionesByProduction(selectedProductionId);
-        const placaReops = allReops.filter((r) => r.placa_id === placa.id).length;
         const placaRecups = allRecups.filter((r) => r.placa_id === placa.id).length;
+        const hasPending = placaReops.some((r) => r.estado === 'pendiente');
         setLastSerie(placa.serie);
         setLastPosicion(placa.posicion);
         setModalInfo({
           placa,
-          reopsCount: placaReops,
+          reopsCount: placaReops.length,
           recuperacionesCount: placaRecups,
+          hasPendingReoperation: hasPending,
           parsed: { serie: placa.serie, posicion: placa.posicion, posicionNormalizada: placa.posicion as PlatePosition, complementaria: '', raw: '' },
           notFound: false,
         });
@@ -308,7 +315,6 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
     }
   };
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (autoTimerRef.current) clearInterval(autoTimerRef.current);
@@ -337,82 +343,7 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
 
       <SelectedProductionBanner onNavigate={onNavigate} />
 
-      {/* Operator info + stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">
-            <User className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{roleLabel}</p>
-            <p className="truncate font-semibold text-primary">{displayName}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning">
-            <RotateCw className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reoperaciones</p>
-            <p className="text-xl font-bold tabular-nums text-primary">{totalReops}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success/15 text-success">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recuperaciones</p>
-            <p className="text-xl font-bold tabular-nums text-primary">{totalRecuperaciones}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Last scan info */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-          <QrCode className="h-5 w-5 text-muted-foreground" />
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Última serie leída</p>
-            <p className="font-mono font-semibold text-primary">{lastSerie ?? '—'}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-          <ScanLine className="h-5 w-5 text-muted-foreground" />
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Última posición leída</p>
-            <p className="font-semibold text-primary">{lastPosicion ?? '—'}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Mode toggle */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-2 rounded-xl border border-border bg-card p-1.5 shadow-sm">
-          <button
-            type="button"
-            onClick={() => { setMode('auto'); setScannerEnabled(true); }}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
-              mode === 'auto' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50'
-            }`}
-          >
-            {mode === 'auto' ? <Zap className="h-4 w-4" /> : <ZapOff className="h-4 w-4" />}
-            Automático
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMode('manual'); setScannerEnabled(false); }}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
-              mode === 'manual' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50'
-            }`}
-          >
-            <Keyboard className="h-4 w-4" />
-            Manual
-          </button>
-        </div>
-      </div>
-
-      {/* Scanner / Manual section */}
+      {/* Scanner / Manual section - first, primary focus */}
       {mode === 'auto' ? (
         <section className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
           {/* Camera error */}
@@ -436,7 +367,11 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
 
           {/* Scanner container */}
           <div className="flex flex-col items-center gap-4">
-            <div id={containerId} className="overflow-hidden rounded-2xl border-2 border-border bg-primary [&_video]:h-full [&_video]:w-full [&_video]:object-cover" style={{ width: '100%', maxWidth: 360, aspectRatio: '1 / 1' }} />
+            <div
+              id={containerId}
+              className="overflow-hidden rounded-2xl border-2 border-border bg-primary [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
+              style={{ width: '100%', maxWidth: 420, aspectRatio: '1 / 1' }}
+            />
 
             {state === 'starting' && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -450,7 +385,13 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
                 Cámara activa. Apunta al código QR de la placa.
               </div>
             )}
-            {state === 'stopped' && (
+            {modalLock && (
+              <div className="flex items-center gap-2 text-sm text-accent">
+                <ScanLine className="h-4 w-4" />
+                Cámara en pausa. Cierra la ventana para reanudar.
+              </div>
+            )}
+            {state === 'stopped' && !modalLock && (
               <p className="text-sm text-muted-foreground">Cámara detenida.</p>
             )}
 
@@ -555,6 +496,81 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
           </form>
         </section>
       )}
+
+      {/* Mode toggle */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
+        <div className="flex gap-2 rounded-xl border border-border bg-card p-1.5 shadow-sm">
+          <button
+            type="button"
+            onClick={() => { setMode('auto'); setScannerEnabled(true); }}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
+              mode === 'auto' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50'
+            }`}
+          >
+            {mode === 'auto' ? <Zap className="h-4 w-4" /> : <ZapOff className="h-4 w-4" />}
+            Automático
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('manual'); setScannerEnabled(false); }}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
+              mode === 'manual' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50'
+            }`}
+          >
+            <Keyboard className="h-4 w-4" />
+            Manual
+          </button>
+        </div>
+      </div>
+
+      {/* Operator info + stats */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/15 text-accent">
+            <User className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{roleLabel}</p>
+            <p className="truncate font-semibold text-primary">{displayName}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning">
+            <RotateCw className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reoperaciones</p>
+            <p className="text-xl font-bold tabular-nums text-primary">{totalReops}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success/15 text-success">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recuperaciones</p>
+            <p className="text-xl font-bold tabular-nums text-primary">{totalRecuperaciones}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Last scan info */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+          <QrCode className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Última serie leída</p>
+            <p className="font-mono font-semibold text-primary">{lastSerie ?? '—'}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+          <ScanLine className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Última posición leída</p>
+            <p className="font-semibold text-primary">{lastPosicion ?? '—'}</p>
+          </div>
+        </div>
+      </div>
 
       <StatusLegend />
 

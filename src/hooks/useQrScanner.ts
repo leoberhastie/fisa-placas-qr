@@ -11,7 +11,9 @@ export interface CameraDevice {
 interface UseQrScannerOptions {
   onScan: (decodedText: string) => void;
   enabled: boolean;
-  /** Lock to prevent duplicate scans of the same QR while modal is open */
+  /** Lock to prevent duplicate scans of the same QR while modal is open.
+   *  When locked becomes true the camera is paused; when it returns to false
+   *  (and enabled is true) the camera resumes automatically. */
   locked: boolean;
   /** Preferred camera: 'rear' or 'front' */
   cameraFacing?: 'rear' | 'front';
@@ -26,8 +28,9 @@ export function useQrScanner({ onScan, enabled, locked, cameraFacing = 'rear' }:
   const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
   const onScanRef = useRef(onScan);
   const lockedRef = useRef(locked);
+  const activeCameraIdRef = useRef<string | null>(null);
+  const enabledRef = useRef(enabled);
 
-  // Keep refs updated without re-starting scanner
   useEffect(() => {
     onScanRef.current = onScan;
   }, [onScan]);
@@ -35,6 +38,14 @@ export function useQrScanner({ onScan, enabled, locked, cameraFacing = 'rear' }:
   useEffect(() => {
     lockedRef.current = locked;
   }, [locked]);
+
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
+
+  useEffect(() => {
+    activeCameraIdRef.current = activeCameraId;
+  }, [activeCameraId]);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
@@ -54,21 +65,25 @@ export function useQrScanner({ onScan, enabled, locked, cameraFacing = 'rear' }:
 
   const startScanner = useCallback(
     async (cameraId: string) => {
-      if (!enabled) return;
+      if (!enabledRef.current) return;
       setState('starting');
       setError(null);
 
       try {
         if (!scannerRef.current) {
-          scannerRef.current = new Html5Qrcode(containerId);
+          scannerRef.current = new Html5Qrcode(containerId, { verbose: false });
         }
 
         await scannerRef.current.start(
           cameraId,
           {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
+            fps: 15,
+            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+              const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.7);
+              return { width: Math.max(160, edge), height: Math.max(160, edge) };
+            },
             aspectRatio: 1.0,
+            disableFlip: false,
           },
           (decodedText: string) => {
             if (!lockedRef.current) {
@@ -88,7 +103,7 @@ export function useQrScanner({ onScan, enabled, locked, cameraFacing = 'rear' }:
         setError(msg);
       }
     },
-    [enabled],
+    [],
   );
 
   // Enumerate cameras and start with rear camera
@@ -134,6 +149,17 @@ export function useQrScanner({ onScan, enabled, locked, cameraFacing = 'rear' }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled]);
 
+  // Pause camera when locked (a scan was just decoded); resume when unlocked.
+  useEffect(() => {
+    if (!enabled) return;
+    if (locked) {
+      void stopScanner();
+    } else if (activeCameraIdRef.current) {
+      void startScanner(activeCameraIdRef.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locked, enabled]);
+
   const switchCamera = useCallback(
     async (cameraId: string) => {
       await stopScanner();
@@ -143,11 +169,11 @@ export function useQrScanner({ onScan, enabled, locked, cameraFacing = 'rear' }:
   );
 
   const restart = useCallback(async () => {
-    if (activeCameraId) {
+    if (activeCameraIdRef.current) {
       await stopScanner();
-      await startScanner(activeCameraId);
+      await startScanner(activeCameraIdRef.current);
     }
-  }, [activeCameraId, startScanner, stopScanner]);
+  }, [startScanner, stopScanner]);
 
   return {
     containerId,
