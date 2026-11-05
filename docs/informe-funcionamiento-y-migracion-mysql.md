@@ -14,7 +14,7 @@ Actualmente utiliza:
 - Exportación a Excel y PDF.
 - Lectura de códigos QR.
 - Reoperación por lote (selección múltiple de placas).
-- Reinicio de datos de una producción.
+- Reinicio de datos de una producción, en dos modos: borrar solo movimientos o eliminar todo.
 
 La aplicación puede prepararse para MySQL local sin reescribir la interfaz. La opción recomendada es añadir un servidor local intermedio entre la aplicación y MySQL.
 
@@ -120,8 +120,8 @@ Desde la pantalla del lector QR, el operador puede abrir el panel de "Reoperaci�
 
 **Flujo:**
 
-1. Seleccionar un **Servicio** (selector con filtro).
-2. Se cargan las **Cajas** disponibles en ese servicio (selector con filtro).
+1. Seleccionar un **Servicio** (selector con filtro). Solo se listan los servicios que tienen cajas no completadas.
+2. Se cargan las **Cajas** disponibles en ese servicio (selector con filtro). Las cajas completadas no se muestran.
 3. Al elegir una caja, se cargan las **placas** de esa caja.
 4. Se ofrecen dos modos de selección:
    - **Por rango:** dos selectores con filtro para elegir la placa inicial y la final. Las placas se muestran como "serie-posición".
@@ -182,6 +182,13 @@ Por estas diferencias, Reoperaciones generales y Cajas deben continuar como mód
 
 El módulo de Servicios agrupa la información operativa por servicio y muestra cobertura, cajas y estados.
 
+Al abrir el detalle de un servicio aparece el bloque de parcialidades, que indica:
+
+- Cuántas parcialidades tiene el servicio.
+- Cuántas cajas están asignadas.
+- Cuántas placas están asignadas de las que tiene el servicio.
+- Cuántas placas faltan para completar el servicio. El bloque se muestra en verde si el servicio está completo y en ámbar si faltan placas.
+
 El Panel de control presenta una vista resumida para supervisión y gerencia, con métricas de la producción activa.
 
 Las métricas se calculan mediante consultas agrupadas para evitar cargar todos los registros en el navegador.
@@ -219,6 +226,8 @@ El proceso incluye:
 
 Las importaciones de cajas por series incluyen una vista previa antes de aplicar los cambios definitivos.
 
+Después de subir un archivo de cajas, la pantalla muestra el estado de la parcialidad del servicio: si la asignación está completa (aviso verde) o parcial (aviso ámbar), junto con las placas que todavía faltan. Ver la sección 4.
+
 ### Paso 13. Reportes y exportaciones
 
 La aplicación permite exportar información visible o filtrada a:
@@ -250,7 +259,10 @@ La pantalla de Ajustes contiene:
 - **Gestión de producciones:** crear, editar y seleccionar la producción de trabajo.
 - **Importación de Excel** (solo administrador).
 - **Cajas por servicio** (solo administrador).
-- **Reiniciar datos de la producción** (solo administrador): elimina todas las placas, reoperaciones, recuperaciones, historial, cajas, servicios e importaciones de la producción activa. La producción en sí no se elimina. Requiere confirmación. Esta acción no se puede deshacer.
+- **Reiniciar datos de la producción** (solo administrador), con dos opciones:
+  - **Borrar solo movimientos:** elimina las cajas registradas y completadas, la caja asignada a cada placa, las reoperaciones, las recuperaciones y el historial. Conserva series, servicios e importaciones. Las placas quedan activas y sin caja, como si solo se hubiera subido el archivo de placas maestras.
+  - **Eliminar todo:** elimina además placas, servicios, series e importaciones. La producción en sí no se elimina.
+  - El proceso se ejecuta por lotes y verifica cada paso. Muestra el progreso en pantalla y cada reinicio queda registrado con fecha y usuario en el registro de reinicios. Requiere confirmación.
 - **Configuración del lector QR.**
 - **Información del sistema.**
 - **Permisos por rol.**
@@ -275,11 +287,11 @@ Las pantallas no deberían comunicarse directamente con la base de datos. Actual
 ### Servicios principales
 
 - Autenticación y perfiles.
-- Producciones (incluye reinicio de datos).
+- Producciones (incluye reinicio de datos por lotes y su registro).
 - Operaciones, reoperaciones, recuperaciones e historial.
 - Métricas y reportes.
 - Importación maestra.
-- Importación y asignación de cajas.
+- Importación y asignación de cajas, con seguimiento de parcialidades.
 - Lectura de placas mediante QR.
 
 ### Dependencias con Supabase
@@ -295,61 +307,33 @@ La interfaz, la navegación, los tipos de dominio, la selección de producción 
 
 ---
 
-## 4. Análisis de parcialidad en la asignación de cajas
+## 4. Parcialidades en la asignación de cajas
 
-### Situación actual
+### Qué es una parcialidad
 
-En muchas producciones las cajas no se importan todas a la vez, sino por parcialidades: el administrador carga un primer lote de cajas para un servicio, y días después carga otro lote con cajas adicionales.
+En muchas producciones las cajas no se importan todas a la vez, sino por parcialidades: el administrador carga un primer archivo con las cajas de un servicio y, días después, otro archivo con más cajas del mismo servicio.
 
-La función actual `assign_service_boxes_by_series` funciona así:
+Cada archivo subido se considera una parcialidad consecutiva (P1, P2, ... P10). Un servicio está completo cuando la última serie de su última caja coincide con la última serie del servicio. Si no coincide, la asignación es parcial.
 
-1. Recibe un lote de cajas (máximo 500 por llamada).
-2. Para cada caja, valida que las series existan en las placas del servicio.
-3. Valida que la caja no se superponga con una caja ya asignada.
-4. Inserta la asignación en `service_boxes` y actualiza `placas.numero_caja`.
+### Cómo funciona hoy
 
-### Cómo maneja las parcialidades hoy
-
-- **Primer lote:** funciona correctamente. Las cajas se asignan sin problema porque no hay cajas previas.
-- **Segundo lote (parcialidad):** la función actual **no tiene parámetro `p_replace_existing`**. Siempre hace INSERT y valida solapamientos. Esto significa que:
-  - Si las cajas del segundo lote no se superponen con las del primero, **se asignan correctamente**.
-  - Si una caja del segundo lote tiene el mismo número o rango que una ya asignada, **se rechaza con error de superposición**.
-  - No hay forma de "añadir" cajas a un servicio que ya tiene cajas asignadas si los rangos se solapan.
-
-### Cómo lo detecta el programa
-
-- La validación de solapamiento está en la función SQL: verifica si `existing.consecutivo_inicial <= v_fin AND v_inicio <= existing.consecutivo_final`.
-- Si hay solapamiento, lanza una excepción: "La caja X se superpone con una caja ya asignada".
-- La vista previa de importación (`preview_box_series_mapping`) detecta series no cubiertas antes de aplicar.
+1. Cada archivo de cajas se asigna por series, en lotes (máximo 500 cajas por llamada).
+2. Para cada caja se valida que sus series existan en las placas del servicio.
+3. Se valida que la caja no se superponga con una caja ya asignada. Si se superpone, la importación se rechaza.
+4. La asignación se guarda en `service_boxes` con su número de parcialidad (`parcialidad`) y si la parcialidad es parcial (`es_parcial`).
+5. Al terminar la importación, la pantalla muestra el aviso de parcialidad con las placas que faltan.
+6. En el detalle del servicio aparecen las métricas de parcialidades, cajas asignadas, placas asignadas y placas faltantes (ver Paso 10).
 
 ### Limitaciones actuales
 
-1. **No hay distinción entre "reemplazar todo" y "añadir parcialidad".** La función anterior `assign_service_boxes_batch` tenía `p_replace_existing`, pero la función actual por series no la tiene.
-2. **No hay registro de qué parcialidad pertenece a qué importación.** La columna `nombre_archivo` en `service_boxes` guarda el archivo de origen, pero no un identificador de parcialidad.
-3. **Si se necesita reemplazar las cajas de un servicio,** el administrador debe usar `reset_service_box_assignments` para limpiar y luego reimportar.
+1. **No existe modo "reemplazar" dentro de la importación.** Para reemplazar las cajas de un servicio, el administrador debe limpiar sus asignaciones y volver a importar.
+2. **Las cajas faltantes se estiman** a partir de las placas que aún no tienen caja; no se listan caja por caja.
 
-### Propuesta para manejar parcialidades de forma profesional
+### Próximos pasos propuestos
 
-1. **Añadir parámetro `p_mode` a `assign_service_boxes_by_series`:**
-   - `append` (por defecto): añade cajas nuevas, rechaza solapamientos. Es el comportamiento actual.
-   - `replace`: elimina las cajas existentes del servicio antes de insertar las nuevas. Equivalente al `p_replace_existing = true` anterior.
-   - `merge`: reemplaza solo las cajas cuyo número coincide, manteniendo las demás.
-
-2. **Registrar parcialidades:**
-   - Añadir una columna `parcialidad_id` o `lote` en `service_boxes` para identificar a qué parcialidad pertenece cada caja.
-   - O usar la tabla `importaciones` como referencia: cada importación tiene su `id` y su `nombre_archivo`, y las cajas asignadas en esa importación se pueden rastrear por `nombre_archivo`.
-
-3. **Vista previa mejorada:**
-   - Mostrar qué cajas del lote ya están asignadas (para decidir entre omitirlas o reemplazarlas).
-   - Mostrar qué cajas son nuevas (parcialidad limpia).
-
-4. **UI de importación con selección de modo:**
-   - Antes de confirmar, el administrador elige: "Añadir a las cajas existentes" o "Reemplazar todas las cajas del servicio".
-   - Si elige añadir y hay solapamientos, se muestran las cajas conflictivas y se ofrece omitirlas.
-
-5. **Reporte de cobertura por parcialidad:**
-   - Mostrar qué porcentaje del servicio está cubierto por cada parcialidad.
-   - Alertar si quedan series sin asignar a ninguna caja.
+- Añadir un modo "añadir a las existentes" o "reemplazar todas las cajas del servicio" antes de confirmar la importación.
+- Mostrar, en la vista previa, qué cajas del archivo ya están asignadas.
+- Reporte de cobertura por parcialidad, con el porcentaje del servicio cubierto por cada una.
 
 ---
 
@@ -426,7 +410,7 @@ Cada contrato debe indicar qué recibe y qué devuelve, por ejemplo:
 - Registrar reoperación.
 - Obtener cajas paginadas.
 - Marcar caja completada.
-- Reiniciar datos de producción.
+- Reiniciar datos de producción, en modo movimientos o total.
 
 ### Fase 2. Separar adaptadores
 
@@ -475,7 +459,10 @@ GET    /api/productions/:id/boxes
 POST   /api/boxes/:id/complete
 POST   /api/boxes/:id/reopen
 
-POST   /api/productions/:id/reset-data
+POST   /api/productions/:id/resets
+POST   /api/productions/:id/resets/:resetId/batches
+POST   /api/productions/:id/resets/:resetId/finish
+GET    /api/productions/:id/resets
 
 GET    /api/productions/:id/metrics
 GET    /api/productions/:id/reports
@@ -498,6 +485,7 @@ Se recomienda iniciar con estas tablas:
 - `production_services`.
 - `service_boxes`.
 - `box_completion`.
+- `reinicios_produccion`.
 
 La columna `version_datos` debe conservarse en `productions`.
 
@@ -519,6 +507,7 @@ Pueden convertirse en consultas SQL del servidor:
 - Resúmenes de servicios.
 - Movimientos de una caja.
 - Listado de cajas por servicio.
+- Información de parcialidad por servicio.
 
 #### Operaciones transaccionales
 
@@ -529,7 +518,7 @@ Deben ejecutarse en el servidor dentro de una transacción MySQL:
 - Cerrar manualmente una reoperación.
 - Importar por lotes.
 - Asignar cajas por rangos de series.
-- Reiniciar datos de una producción.
+- Reiniciar datos de una producción. Se ejecuta por lotes: cada lote es una transacción independiente, se verifica al terminar cada paso y el reinicio queda registrado con usuario y fecha.
 
 Una transacción debe guardar el cambio, el historial y el aumento de versión como una sola operación. Si una parte falla, no debe quedar el sistema en un estado incompleto.
 
@@ -566,7 +555,7 @@ La aplicación no debe contener credenciales de MySQL. La interfaz solo necesita
 | Paginación | `range` | `LIMIT` y `OFFSET`, o cursor |
 | Sincronización | `version_datos` | La misma columna consultada por la API |
 | Historial | Tabla y funciones SQL | Tabla y transacciones del servidor |
-| Reinicio de datos | `reset_production_data` RPC | Transacción DELETE en la API |
+| Reinicio de datos | `start_production_reset`, `reset_production_batch` y `finish_production_reset` (RPC por lotes) | Proceso por lotes en la API, con tabla `reinicios_produccion` |
 
 ---
 
@@ -584,7 +573,7 @@ La aplicación no debe contener credenciales de MySQL. La interfaz solo necesita
 10. Se debe conservar el historial de acciones y el usuario que las ejecutó.
 11. La API local debe limitar sus orígenes permitidos y no aceptar cualquier origen en producción.
 12. Se deben realizar copias de seguridad de MySQL antes de importaciones masivas.
-13. El reinicio de datos debe requerir rol de administrador y confirmación explícita.
+13. El reinicio de datos debe requerir rol de administrador y confirmación explícita, y debe quedar registrado con usuario y fecha.
 
 ---
 
@@ -619,7 +608,7 @@ La aplicación no debe contener credenciales de MySQL. La interfaz solo necesita
 - Implementar historial.
 - Implementar cajas completadas y reabiertas.
 - Implementar aumento de versiones.
-- Implementar reinicio de datos de producción.
+- Implementar reinicio de datos de producción por lotes, en sus dos modos, con registro de auditoría.
 
 ### Etapa E: consultas y módulos avanzados
 
@@ -629,7 +618,7 @@ La aplicación no debe contener credenciales de MySQL. La interfaz solo necesita
 - Reportes.
 - Importaciones Excel.
 - Exportaciones.
-- Asignación de cajas por parcialidades.
+- Asignación de cajas por parcialidades, incluido el modo de reemplazo.
 
 ### Etapa F: validación y cambio
 

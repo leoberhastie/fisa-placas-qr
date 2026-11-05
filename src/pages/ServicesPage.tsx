@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Layers, Boxes, Clock, AlertTriangle, CheckCircle2, RotateCcw, FileText } from 'lucide-react';
 import { SelectedProductionBanner } from '@/components/productions/SelectedProductionBanner';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -17,6 +17,7 @@ import { useProductionMetrics } from '@/hooks/useProductionMetrics';
 import { DataUpdatedAlert } from '@/components/import/DataUpdatedAlert';
 import { PageLoader } from '@/components/ui/PageLoader';
 import type { MetricStatus, ServiceMetrics } from '@/lib/operationMetrics';
+import { getServiceParcialidadInfo, type ServiceParcialidadInfo } from '@/services/operationService';
 
 interface ScreenProps {
   onNavigate: (path: string) => void;
@@ -147,6 +148,7 @@ export function ServicesPage({ onNavigate }: ScreenProps) {
               <ServiceAccordionItem
                 key={service.servicio}
                 service={service}
+                produccionId={selectedProductionId}
                 isOpen={openServicio === service.servicio}
                 onToggle={() => setOpenServicio((current) => (current === service.servicio ? null : service.servicio))}
                 onOpenPanel={openPanel}
@@ -172,19 +174,32 @@ export function ServicesPage({ onNavigate }: ScreenProps) {
 
 interface ServiceAccordionItemProps {
   service: ServiceMetrics;
+  produccionId: string | null;
   isOpen: boolean;
   onToggle: () => void;
   onOpenPanel: (servicio: string, estado: EstadoFilter) => void;
 }
 
-function ServiceAccordionItem({ service, isOpen, onToggle, onOpenPanel }: ServiceAccordionItemProps) {
+function ServiceAccordionItem({ service, produccionId, isOpen, onToggle, onOpenPanel }: ServiceAccordionItemProps) {
   const panelId = `servicio-panel-${service.servicio.replace(/\s+/g, '-')}`;
+  const [parcialidad, setParcialidad] = useState<ServiceParcialidadInfo | null>(null);
   const counts: Record<MetricStatus, number> = {
     en_proceso: service.cajasEnProceso ?? 0,
     con_reoperaciones: service.cajasConReoperaciones ?? 0,
     completada: (service.cajasCompletas ?? 0) - (service.cajasCompletadasRo ?? 0),
     completada_ro: service.cajasCompletadasRo ?? 0,
   };
+
+  useEffect(() => {
+    if (!isOpen || !produccionId) return;
+    let active = true;
+    getServiceParcialidadInfo(produccionId, service.servicio).then((info) => {
+      if (active) setParcialidad(info);
+    });
+    return () => {
+      active = false;
+    };
+  }, [isOpen, produccionId, service.servicio]);
 
   return (
     <li className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -252,6 +267,15 @@ function ServiceAccordionItem({ service, isOpen, onToggle, onOpenPanel }: Servic
               <MetricStat label="Placas afectadas" value={service.placasAfectadas} />
               <MetricStat label="Porcentaje de recuperación" value={`${service.porcentajeRecuperacion}%`} />
             </div>
+
+            {parcialidad && (
+              <div className={`grid grid-cols-2 gap-4 rounded-xl border p-4 text-sm sm:grid-cols-4 ${parcialidad.es_completo ? 'border-success/30 bg-success/10' : 'border-warning/40 bg-warning/10'}`}>
+                <MetricStat label="Parcialidades" value={parcialidad.total_parcialidades} />
+                <MetricStat label="Cajas asignadas" value={parcialidad.total_cajas_asignadas} />
+                <MetricStat label="Placas asignadas" value={`${parcialidad.total_placas_asignadas} de ${parcialidad.total_placas_servicio}`} />
+                <MetricStat label="Placas faltantes" value={parcialidad.placas_faltantes} />
+              </div>
+            )}
 
             <button
               type="button"
