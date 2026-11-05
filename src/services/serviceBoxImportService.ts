@@ -287,8 +287,6 @@ export async function assignServiceBoxes(
   let totalSeries = 0;
   let totalPlates = 0;
 
-  await resetServiceBoxAssignments(produccionId, servicio);
-
   for (let batchIndex = 0; batchIndex < totalBatches; batchIndex += 1) {
     const batch = validRows.slice(batchIndex * BOX_BATCH_SIZE, (batchIndex + 1) * BOX_BATCH_SIZE);
     const { data, error } = await supabase.rpc('assign_service_boxes_by_series', {

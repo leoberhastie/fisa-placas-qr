@@ -115,6 +115,37 @@ export async function listPlacasByBox(produccionId: string, servicio: string, nu
   );
 }
 
+export interface ServiceParcialidadInfo {
+  total_parcialidades: number;
+  total_cajas_asignadas: number;
+  total_placas_asignadas: number;
+  total_placas_servicio: number;
+  placas_faltantes: number;
+  cajas_faltantes_estimadas: number;
+  es_completo: boolean;
+}
+
+export async function getServiceParcialidadInfo(
+  produccionId: string,
+  servicio: string,
+): Promise<ServiceParcialidadInfo | null> {
+  const { data, error } = await supabase.rpc('get_service_parcialidad_info', {
+    p_produccion_id: produccionId,
+    p_servicio: servicio,
+  });
+  if (error || !Array.isArray(data) || data.length === 0) return null;
+  const row = data[0];
+  return {
+    total_parcialidades: Number(row.total_parcialidades),
+    total_cajas_asignadas: Number(row.total_cajas_asignadas),
+    total_placas_asignadas: Number(row.total_placas_asignadas),
+    total_placas_servicio: Number(row.total_placas_servicio),
+    placas_faltantes: Number(row.placas_faltantes),
+    cajas_faltantes_estimadas: Number(row.cajas_faltantes_estimadas),
+    es_completo: Boolean(row.es_completo),
+  };
+}
+
 // =========================================================
 // REOPERACIONES
 // =========================================================

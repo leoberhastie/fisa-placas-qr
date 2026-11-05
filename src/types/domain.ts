@@ -50,7 +50,8 @@ export interface Placa {
 }
 
 export function placaLabel(placa: Pick<Placa, 'serie' | 'posicion'>): string {
-  return `${placa.serie}-${placa.posicion}`;
+  const suffix = placa.posicion === 'FRONTAL' ? 'F' : 'T';
+  return `${placa.serie}-${suffix}`;
 }
 
 export type ReoperationProcess = 'Impresion' | 'Sticker' | 'Brotech' | 'Blanking' | 'Embossing';
