@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Layers, Boxes, Clock, AlertTriangle, CheckCircle2, RotateCcw, FileText } from 'lucide-react';
+import { ChevronDown, Layers, Boxes, Clock, AlertTriangle, CheckCircle2, RotateCcw, FileText, Inbox } from 'lucide-react';
 import { SelectedProductionBanner } from '@/components/productions/SelectedProductionBanner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DonutChart } from '@/components/metrics/DonutChart';
@@ -23,7 +23,8 @@ interface ScreenProps {
   onNavigate: (path: string) => void;
 }
 
-type EstadoFilter = 'todos' | MetricStatus;
+type EstadoFilter = 'todos' | 'sin_asignar' | MetricStatus;
+type PanelEstadoFilter = 'todos' | MetricStatus;
 
 const ESTADO_OPTIONS: { value: EstadoFilter; label: string }[] = [
   { value: 'todos', label: 'Todos los estados' },
@@ -31,6 +32,7 @@ const ESTADO_OPTIONS: { value: EstadoFilter; label: string }[] = [
   { value: 'en_proceso', label: 'En proceso' },
   { value: 'completada', label: 'Completada' },
   { value: 'completada_ro', label: 'Completada RO' },
+  { value: 'sin_asignar', label: 'Sin asignar' },
 ];
 
 const KPI_CARDS: { estado: MetricStatus; label: string; Icon: typeof Clock; tone: string }[] = [
@@ -39,6 +41,10 @@ const KPI_CARDS: { estado: MetricStatus; label: string; Icon: typeof Clock; tone
   { estado: 'completada_ro', label: 'Completadas RO', Icon: RotateCcw, tone: 'border-accent/20 bg-accent/5 text-accent' },
   { estado: 'completada', label: 'Completadas', Icon: CheckCircle2, tone: 'border-success/20 bg-success/5 text-success' },
 ];
+
+function isSinAsignar(service: ServiceMetrics): boolean {
+  return service.boxes.every((box) => !box.caja);
+}
 
 export function ServicesPage({ onNavigate }: ScreenProps) {
   const { operatorName, selectedProductionId } = useProductionSelection();
@@ -53,15 +59,16 @@ export function ServicesPage({ onNavigate }: ScreenProps) {
   const [estadoFilter, setEstadoFilter] = useState<EstadoFilter>('todos');
   const [openServicio, setOpenServicio] = useState<string | null>(null);
   const [panelService, setPanelService] = useState<string | null>(null);
-  const [panelEstado, setPanelEstado] = useState<EstadoFilter>('todos');
+  const [panelEstado, setPanelEstado] = useState<PanelEstadoFilter>('todos');
 
   const services = serverServices;
 
-  const visibleServices = services.filter(
-    (s) =>
-      (servicioFilter === 'todos' || s.servicio === servicioFilter) &&
-      (estadoFilter === 'todos' || s.estado === estadoFilter),
-  );
+  const visibleServices = services.filter((s) => {
+    if (servicioFilter !== 'todos' && s.servicio !== servicioFilter) return false;
+    if (estadoFilter === 'sin_asignar') return isSinAsignar(s);
+    if (isSinAsignar(s)) return false;
+    return estadoFilter === 'todos' || s.estado === estadoFilter;
+  });
 
   const selectedProduction = productions.find((p) => p.id === selectedProductionId) ?? null;
   const produccionLabel = selectedProduction ? productionDisplayLabel(selectedProduction) : '—';
@@ -73,11 +80,11 @@ export function ServicesPage({ onNavigate }: ScreenProps) {
     usuario,
     filtros: [
       ...(servicioFilter === 'todos' ? [] : [`Servicio ${servicioFilter}`]),
-      ...(estadoFilter === 'todos' ? [] : [`Estado ${SERVICE_STATUS_LABELS[estadoFilter]}`]),
+      ...(estadoFilter === 'todos' ? [] : [`Estado ${ESTADO_OPTIONS.find((o) => o.value === estadoFilter)?.label ?? ''}`]),
     ],
   };
 
-  function openPanel(servicio: string, estado: EstadoFilter) {
+  function openPanel(servicio: string, estado: PanelEstadoFilter) {
     setPanelService(servicio);
     setPanelEstado(estado);
   }
@@ -177,11 +184,12 @@ interface ServiceAccordionItemProps {
   produccionId: string | null;
   isOpen: boolean;
   onToggle: () => void;
-  onOpenPanel: (servicio: string, estado: EstadoFilter) => void;
+  onOpenPanel: (servicio: string, estado: PanelEstadoFilter) => void;
 }
 
 function ServiceAccordionItem({ service, produccionId, isOpen, onToggle, onOpenPanel }: ServiceAccordionItemProps) {
   const panelId = `servicio-panel-${service.servicio.replace(/\s+/g, '-')}`;
+  const sinAsignar = isSinAsignar(service);
   const [parcialidad, setParcialidad] = useState<ServiceParcialidadInfo | null>(null);
   const counts: Record<MetricStatus, number> = {
     en_proceso: service.cajasEnProceso ?? 0,
@@ -218,7 +226,14 @@ function ServiceAccordionItem({ service, produccionId, isOpen, onToggle, onOpenP
               <span className="truncate">{service.servicio}</span>
             </p>
             <div className="mt-1">
-              <OperationStatusBadge status={service.estado} labels={SERVICE_STATUS_LABELS} />
+              {sinAsignar ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+                  <Inbox className="h-3.5 w-3.5" aria-hidden="true" />
+                  Sin asignar
+                </span>
+              ) : (
+                <OperationStatusBadge status={service.estado} labels={SERVICE_STATUS_LABELS} />
+              )}
             </div>
           </div>
         </div>

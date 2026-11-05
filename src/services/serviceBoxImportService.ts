@@ -291,6 +291,7 @@ export async function assignServiceBoxes(
         ...(row.cantidad_placas === null ? {} : { cantidad_placas: row.cantidad_placas }),
       })),
       p_nombre_archivo: fileName,
+      p_parcialidad: lastParcialidad ?? null,
     });
 
     if (error || !data?.[0]) {
