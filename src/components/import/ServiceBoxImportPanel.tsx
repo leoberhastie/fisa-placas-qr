@@ -115,7 +115,7 @@ export function ServiceBoxImportPanel({ productionId, servicio, tipo, onImported
     setPreviewing(true);
     setError(null);
     try {
-      const result = await previewBoxSeriesMapping(productionId, servicio, rows);
+      const result = await previewBoxSeriesMapping(productionId, servicio, tipo, rows);
       setPreview(result);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo verificar las series contra las placas.');
@@ -123,7 +123,7 @@ export function ServiceBoxImportPanel({ productionId, servicio, tipo, onImported
     } finally {
       setPreviewing(false);
     }
-  }, [rows, productionId, servicio]);
+  }, [rows, productionId, servicio, tipo]);
 
   useEffect(() => {
     if (step === 'preview' && rows) {
