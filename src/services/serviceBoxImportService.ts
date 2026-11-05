@@ -210,6 +210,7 @@ async function fetchPreviewChunk(
 export async function previewBoxSeriesMapping(
   produccionId: string,
   servicio: string,
+  tipoServicio: ServiceType,
   rows: ServiceBoxImportRow[],
 ): Promise<PreviewResult> {
   const data: Record<string, unknown>[] = [];
@@ -233,13 +234,14 @@ export async function previewBoxSeriesMapping(
 
   const validRows = previewRows.filter((r) => r.error === null);
   const totalSeries = validRows.reduce((sum, r) => sum + r.series_count, 0);
+  const platesPerSeries = tipoServicio === 'JGS' ? 2 : 1;
   const errorCount = previewRows.filter((r) => r.error !== null).length;
   const duplicateBoxes = new Set(validRows.map((r) => r.numero_caja)).size !== validRows.length;
 
   return {
     rows: previewRows,
     totalSeries,
-    totalPlates: totalSeries,
+    totalPlates: totalSeries * platesPerSeries,
     errorCount,
     duplicateBoxes,
     overlappingRanges: hasOverlappingConsecutivoRanges(validRows),
