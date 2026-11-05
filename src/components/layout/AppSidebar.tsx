@@ -14,9 +14,13 @@ interface SidebarPanelProps {
   signingOut: boolean;
 }
 
-export function AppSidebar(props: SidebarPanelProps) {
+export function AppSidebar({ open, ...props }: SidebarPanelProps & { open: boolean }) {
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col bg-sidebar text-sidebar-foreground lg:flex">
+    <aside
+      className={`fixed inset-y-0 left-0 z-30 hidden w-72 flex-col bg-sidebar text-sidebar-foreground ${
+        open ? 'lg:flex' : ''
+      }`}
+    >
       <SidebarPanel {...props} />
     </aside>
   );
