@@ -43,7 +43,7 @@ const KPI_CARDS: { estado: MetricStatus; label: string; Icon: typeof Clock; tone
 ];
 
 function isSinAsignar(service: ServiceMetrics): boolean {
-  return service.boxes.every((box) => !box.caja);
+  return service.cajas === 0;
 }
 
 export function ServicesPage({ onNavigate }: ScreenProps) {
