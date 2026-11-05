@@ -13,6 +13,8 @@ Actualmente utiliza:
 - Importación de archivos Excel.
 - Exportación a Excel y PDF.
 - Lectura de códigos QR.
+- Reoperación por lote (selección múltiple de placas).
+- Reinicio de datos de una producción.
 
 La aplicación puede prepararse para MySQL local sin reescribir la interfaz. La opción recomendada es añadir un servidor local intermedio entre la aplicación y MySQL.
 
@@ -84,17 +86,59 @@ Cada producción tiene información como código, consecutivo, estado, año, des
 
 ### Paso 6. Registro mediante código QR
 
+El lector QR es la primera sección que aparece al entrar a la pantalla de lectura, para que el operador tenga la menor distracción posible.
+
 1. El operador abre el lector QR.
-2. Se solicita permiso para usar la cámara.
+2. La cámara trasera principal se selecciona automáticamente (si hay varias, se descartan lentes secundarias como ultra-wide, macro o tele).
 3. Se lee el código de la placa.
-4. El sistema busca la placa dentro de la producción activa.
-5. Se muestran sus datos y su posición.
-6. El operador registra una reoperación o una recuperación.
-7. El sistema guarda el movimiento y actualiza el historial.
+4. La cámara se pausa automáticamente tras cada lectura.
+5. El sistema busca la placa dentro de la producción activa.
+6. Se muestra la información de la placa en un modal.
+7. El operador elige reoperación o recuperación.
+   - El botón "Recuperar" solo se habilita si la placa tiene una reoperación pendiente.
+   - El botón "Reoperación" se deshabilita si la placa no se encontró.
+8. Al confirmar, el registro se guarda en un solo paso y el modal se cierra.
+9. La cámara se reanuda automáticamente para la siguiente lectura.
 
-Las operaciones se asocian a la producción activa y al usuario que las ejecuta.
+**Modos de operación:**
 
-### Paso 7. Reoperaciones generales
+- **Automático:** la cámara escanea continuamente. Al leer un código se pausa, muestra el modal, y al confirmar se reanuda.
+- **Manual:** el operador escribe la serie y posición (FRONTAL/TRASERA) para buscar la placa sin cámara.
+
+**Botones disponibles:**
+
+- Automático / Manual: alterna entre cámara y búsqueda manual.
+- Escanear siguiente: reanuda la cámara manualmente si es necesario.
+
+**Pausa al cambiar de pantalla:** cuando el operador navega a otra pantalla, la cámara se detiene automáticamente al desmontar el componente.
+
+**Información visible:** solo se muestra la tarjeta "Última serie leída". Se eliminaron las tarjetas de operador, totales, última posición y producción activa de esta pantalla para reducir distracciones. La información del operador y la producción activa están disponibles en el menú lateral.
+
+### Paso 7. Reoperación por lote (selección múltiple)
+
+Desde la pantalla del lector QR, el operador puede abrir el panel de "Reoperación por lote" para registrar reoperaciones sobre múltiples placas a la vez.
+
+**Flujo:**
+
+1. Seleccionar un **Servicio** (selector con filtro).
+2. Se cargan las **Cajas** disponibles en ese servicio (selector con filtro).
+3. Al elegir una caja, se cargan las **placas** de esa caja.
+4. Se ofrecen dos modos de selección:
+   - **Por rango:** dos selectores con filtro para elegir la placa inicial y la final. Las placas se muestran como "serie-posición".
+   - **Manual:** tarjetas seleccionables "serie-posición" con un clic.
+5. El botón "Reoperar (N)" muestra el contador de placas seleccionadas.
+6. Al pulsarlo, se elige un proceso (Impresión, Sticker, Brotech, Blanking, Embossing) que se aplica a todas las placas.
+7. Se registran todas las reoperaciones y sus entradas de historial en lote.
+
+**Reglas:**
+
+- La selección múltiple solo aplica a reoperaciones, no a recuperaciones.
+- Las placas de un rango pertenecen a la misma caja.
+- Las placas se cargan solo al elegir la caja para evitar consultas innecesarias.
+- El servicio y la caja elegidos se guardan en el navegador y se pueden volver a elegir.
+- La cámara se pausa mientras el panel de lote está abierto.
+
+### Paso 8. Reoperaciones generales
 
 Esta pantalla muestra las reoperaciones registradas de la producción activa.
 
@@ -113,7 +157,7 @@ Permite:
 
 La pantalla también presenta indicadores de total de reoperaciones, placas afectadas, pendientes y recuperaciones.
 
-### Paso 8. Control de cajas
+### Paso 9. Control de cajas
 
 La pantalla de Cajas tiene un objetivo diferente al listado de reoperaciones.
 
@@ -134,7 +178,7 @@ Permite:
 
 Por estas diferencias, Reoperaciones generales y Cajas deben continuar como módulos separados.
 
-### Paso 9. Servicios y panel de control
+### Paso 10. Servicios y panel de control
 
 El módulo de Servicios agrupa la información operativa por servicio y muestra cobertura, cajas y estados.
 
@@ -142,7 +186,7 @@ El Panel de control presenta una vista resumida para supervisión y gerencia, co
 
 Las métricas se calculan mediante consultas agrupadas para evitar cargar todos los registros en el navegador.
 
-### Paso 10. Historial
+### Paso 11. Historial
 
 El historial registra las acciones importantes del sistema, como:
 
@@ -152,9 +196,15 @@ El historial registra las acciones importantes del sistema, como:
 - Cambios de estado.
 - Ediciones de placas.
 
-Sirve para revisar qué ocurrió, cuándo ocurrió, sobre qué placa o producción y qué usuario ejecutó la acción.
+Al hacer clic en "Ver placa" se abre un modal con toda la información de la placa:
 
-### Paso 11. Importaciones
+- **Tarjetas de resumen:** total de reoperaciones, recuperadas, pendientes y recuperaciones.
+- **Ficha de la placa:** serie, posición, servicio, caja, consecutivo y fecha de importación, organizados con iconos.
+- **Rango de series de la caja:** serie inicial, serie final y total de placas de la caja a la que pertenece la placa (filtrando por servicio y caja para evitar mezclar cajas con el mismo número en distintos servicios).
+- **Detalle de reoperaciones:** proceso, estado, fecha, quien registró la reoperación y quien la confirmó (con fecha).
+- **Cronología de movimientos:** línea de tiempo con todas las operaciones de la placa.
+
+### Paso 12. Importaciones
 
 Los administradores pueden importar información maestra desde Excel.
 
@@ -169,7 +219,7 @@ El proceso incluye:
 
 Las importaciones de cajas por series incluyen una vista previa antes de aplicar los cambios definitivos.
 
-### Paso 12. Reportes y exportaciones
+### Paso 13. Reportes y exportaciones
 
 La aplicación permite exportar información visible o filtrada a:
 
@@ -178,7 +228,7 @@ La aplicación permite exportar información visible o filtrada a:
 
 Los archivos incluyen el nombre de la producción, el usuario, los filtros utilizados y los indicadores correspondientes cuando aplica.
 
-### Paso 13. Sincronización
+### Paso 14. Sincronización
 
 La producción tiene un número de versión de datos.
 
@@ -190,6 +240,20 @@ Cuando se registra una operación o se realiza una importación:
 4. Se evita recargar información que no cambió.
 
 Este mecanismo es independiente de Supabase y puede conservarse con MySQL.
+
+### Paso 15. Ajustes
+
+La pantalla de Ajustes contiene:
+
+- **Tu cuenta:** nombre, usuario, rol y producción activa.
+- **Cambiar contraseña.**
+- **Gestión de producciones:** crear, editar y seleccionar la producción de trabajo.
+- **Importación de Excel** (solo administrador).
+- **Cajas por servicio** (solo administrador).
+- **Reiniciar datos de la producción** (solo administrador): elimina todas las placas, reoperaciones, recuperaciones, historial, cajas, servicios e importaciones de la producción activa. La producción en sí no se elimina. Requiere confirmación. Esta acción no se puede deshacer.
+- **Configuración del lector QR.**
+- **Información del sistema.**
+- **Permisos por rol.**
 
 ---
 
@@ -211,7 +275,7 @@ Las pantallas no deberían comunicarse directamente con la base de datos. Actual
 ### Servicios principales
 
 - Autenticación y perfiles.
-- Producciones.
+- Producciones (incluye reinicio de datos).
 - Operaciones, reoperaciones, recuperaciones e historial.
 - Métricas y reportes.
 - Importación maestra.
@@ -231,7 +295,65 @@ La interfaz, la navegación, los tipos de dominio, la selección de producción 
 
 ---
 
-## 4. Propuesta recomendada para MySQL local
+## 4. Análisis de parcialidad en la asignación de cajas
+
+### Situación actual
+
+En muchas producciones las cajas no se importan todas a la vez, sino por parcialidades: el administrador carga un primer lote de cajas para un servicio, y días después carga otro lote con cajas adicionales.
+
+La función actual `assign_service_boxes_by_series` funciona así:
+
+1. Recibe un lote de cajas (máximo 500 por llamada).
+2. Para cada caja, valida que las series existan en las placas del servicio.
+3. Valida que la caja no se superponga con una caja ya asignada.
+4. Inserta la asignación en `service_boxes` y actualiza `placas.numero_caja`.
+
+### Cómo maneja las parcialidades hoy
+
+- **Primer lote:** funciona correctamente. Las cajas se asignan sin problema porque no hay cajas previas.
+- **Segundo lote (parcialidad):** la función actual **no tiene parámetro `p_replace_existing`**. Siempre hace INSERT y valida solapamientos. Esto significa que:
+  - Si las cajas del segundo lote no se superponen con las del primero, **se asignan correctamente**.
+  - Si una caja del segundo lote tiene el mismo número o rango que una ya asignada, **se rechaza con error de superposición**.
+  - No hay forma de "añadir" cajas a un servicio que ya tiene cajas asignadas si los rangos se solapan.
+
+### Cómo lo detecta el programa
+
+- La validación de solapamiento está en la función SQL: verifica si `existing.consecutivo_inicial <= v_fin AND v_inicio <= existing.consecutivo_final`.
+- Si hay solapamiento, lanza una excepción: "La caja X se superpone con una caja ya asignada".
+- La vista previa de importación (`preview_box_series_mapping`) detecta series no cubiertas antes de aplicar.
+
+### Limitaciones actuales
+
+1. **No hay distinción entre "reemplazar todo" y "añadir parcialidad".** La función anterior `assign_service_boxes_batch` tenía `p_replace_existing`, pero la función actual por series no la tiene.
+2. **No hay registro de qué parcialidad pertenece a qué importación.** La columna `nombre_archivo` en `service_boxes` guarda el archivo de origen, pero no un identificador de parcialidad.
+3. **Si se necesita reemplazar las cajas de un servicio,** el administrador debe usar `reset_service_box_assignments` para limpiar y luego reimportar.
+
+### Propuesta para manejar parcialidades de forma profesional
+
+1. **Añadir parámetro `p_mode` a `assign_service_boxes_by_series`:**
+   - `append` (por defecto): añade cajas nuevas, rechaza solapamientos. Es el comportamiento actual.
+   - `replace`: elimina las cajas existentes del servicio antes de insertar las nuevas. Equivalente al `p_replace_existing = true` anterior.
+   - `merge`: reemplaza solo las cajas cuyo número coincide, manteniendo las demás.
+
+2. **Registrar parcialidades:**
+   - Añadir una columna `parcialidad_id` o `lote` en `service_boxes` para identificar a qué parcialidad pertenece cada caja.
+   - O usar la tabla `importaciones` como referencia: cada importación tiene su `id` y su `nombre_archivo`, y las cajas asignadas en esa importación se pueden rastrear por `nombre_archivo`.
+
+3. **Vista previa mejorada:**
+   - Mostrar qué cajas del lote ya están asignadas (para decidir entre omitirlas o reemplazarlas).
+   - Mostrar qué cajas son nuevas (parcialidad limpia).
+
+4. **UI de importación con selección de modo:**
+   - Antes de confirmar, el administrador elige: "Añadir a las cajas existentes" o "Reemplazar todas las cajas del servicio".
+   - Si elige añadir y hay solapamientos, se muestran las cajas conflictivas y se ofrece omitirlas.
+
+5. **Reporte de cobertura por parcialidad:**
+   - Mostrar qué porcentaje del servicio está cubierto por cada parcialidad.
+   - Alertar si quedan series sin asignar a ninguna caja.
+
+---
+
+## 5. Propuesta recomendada para MySQL local
 
 ### Opción recomendada: aplicación web + API local + MySQL
 
@@ -277,7 +399,7 @@ El servidor puede ejecutarse en el mismo equipo que MySQL o en un servidor local
 
 ---
 
-## 5. Cómo desacoplar la aplicación de Supabase
+## 6. Cómo desacoplar la aplicación de Supabase
 
 ### Fase 1. Definir contratos de datos
 
@@ -304,6 +426,7 @@ Cada contrato debe indicar qué recibe y qué devuelve, por ejemplo:
 - Registrar reoperación.
 - Obtener cajas paginadas.
 - Marcar caja completada.
+- Reiniciar datos de producción.
 
 ### Fase 2. Separar adaptadores
 
@@ -352,6 +475,8 @@ GET    /api/productions/:id/boxes
 POST   /api/boxes/:id/complete
 POST   /api/boxes/:id/reopen
 
+POST   /api/productions/:id/reset-data
+
 GET    /api/productions/:id/metrics
 GET    /api/productions/:id/reports
 ```
@@ -393,6 +518,7 @@ Pueden convertirse en consultas SQL del servidor:
 - Datos de reportes.
 - Resúmenes de servicios.
 - Movimientos de una caja.
+- Listado de cajas por servicio.
 
 #### Operaciones transaccionales
 
@@ -403,6 +529,7 @@ Deben ejecutarse en el servidor dentro de una transacción MySQL:
 - Cerrar manualmente una reoperación.
 - Importar por lotes.
 - Asignar cajas por rangos de series.
+- Reiniciar datos de una producción.
 
 Una transacción debe guardar el cambio, el historial y el aumento de versión como una sola operación. Si una parte falla, no debe quedar el sistema en un estado incompleto.
 
@@ -424,7 +551,7 @@ La aplicación no debe contener credenciales de MySQL. La interfaz solo necesita
 
 ---
 
-## 6. Equivalencias entre Supabase y MySQL
+## 7. Equivalencias entre Supabase y MySQL
 
 | Funcionalidad actual | En Supabase | En la solución MySQL |
 |---|---|---|
@@ -439,10 +566,11 @@ La aplicación no debe contener credenciales de MySQL. La interfaz solo necesita
 | Paginación | `range` | `LIMIT` y `OFFSET`, o cursor |
 | Sincronización | `version_datos` | La misma columna consultada por la API |
 | Historial | Tabla y funciones SQL | Tabla y transacciones del servidor |
+| Reinicio de datos | `reset_production_data` RPC | Transacción DELETE en la API |
 
 ---
 
-## 7. Reglas de seguridad para MySQL
+## 8. Reglas de seguridad para MySQL
 
 1. MySQL no debe estar expuesto directamente al navegador.
 2. Las credenciales de MySQL deben existir únicamente en el servidor local.
@@ -456,10 +584,11 @@ La aplicación no debe contener credenciales de MySQL. La interfaz solo necesita
 10. Se debe conservar el historial de acciones y el usuario que las ejecutó.
 11. La API local debe limitar sus orígenes permitidos y no aceptar cualquier origen en producción.
 12. Se deben realizar copias de seguridad de MySQL antes de importaciones masivas.
+13. El reinicio de datos debe requerir rol de administrador y confirmación explícita.
 
 ---
 
-## 8. Plan de implementación recomendado
+## 9. Plan de implementación recomendado
 
 ### Etapa A: preparación
 
@@ -485,11 +614,12 @@ La aplicación no debe contener credenciales de MySQL. La interfaz solo necesita
 
 ### Etapa D: operaciones críticas
 
-- Implementar reoperaciones.
+- Implementar reoperaciones (individuales y por lote).
 - Implementar recuperaciones.
 - Implementar historial.
 - Implementar cajas completadas y reabiertas.
 - Implementar aumento de versiones.
+- Implementar reinicio de datos de producción.
 
 ### Etapa E: consultas y módulos avanzados
 
@@ -499,6 +629,7 @@ La aplicación no debe contener credenciales de MySQL. La interfaz solo necesita
 - Reportes.
 - Importaciones Excel.
 - Exportaciones.
+- Asignación de cajas por parcialidades.
 
 ### Etapa F: validación y cambio
 
@@ -510,7 +641,7 @@ La aplicación no debe contener credenciales de MySQL. La interfaz solo necesita
 
 ---
 
-## 9. Recomendación final
+## 10. Recomendación final
 
 No conviene reemplazar Supabase de una sola vez. La alternativa más segura es desarrollar una capa de contratos y mantener dos proveedores:
 
