@@ -313,7 +313,7 @@ La interfaz, la navegación, los tipos de dominio, la selección de producción 
 
 En muchas producciones las cajas no se importan todas a la vez, sino por parcialidades: el administrador carga un primer archivo con las cajas de un servicio y, días después, otro archivo con más cajas del mismo servicio.
 
-Cada archivo subido se considera una parcialidad consecutiva (P1, P2, ... P10). Un servicio está completo cuando la última serie de su última caja coincide con la última serie del servicio. Si no coincide, la asignación es parcial.
+Cada archivo subido se considera una parcialidad consecutiva numerada 1, 2, 3, en orden de subida. Un servicio está completo cuando la última serie de su última caja coincide con la última serie del servicio. Si no coincide, la asignación es parcial.
 
 ### Cómo funciona hoy
 
