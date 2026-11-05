@@ -91,8 +91,3 @@ export async function updateProductionStatus(
   }
   return data as Production;
 }
-
-export async function resetProductionData(produccionId: string): Promise<void> {
-  const { error } = await supabase.rpc('reset_production_data', { p_produccion_id: produccionId });
-  if (error) throw new Error('No se pudieron reiniciar los datos de la producción.');
-}
