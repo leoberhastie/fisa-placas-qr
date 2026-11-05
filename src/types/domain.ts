@@ -49,6 +49,10 @@ export interface Placa {
   activo: boolean;
 }
 
+export function placaLabel(placa: Pick<Placa, 'serie' | 'posicion'>): string {
+  return `${placa.serie}-${placa.posicion}`;
+}
+
 export type ReoperationProcess = 'Impresion' | 'Sticker' | 'Brotech' | 'Blanking' | 'Embossing';
 
 export const REOPERATION_PROCESSES: ReoperationProcess[] = [
