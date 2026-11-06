@@ -23,31 +23,62 @@ const POSITION_NORMALIZE: Record<string, PlatePosition> = {
   tras: 'TRASERA',
 };
 
+const ASTERISK_PLACA_PATTERN = /^PLACA\s+(.+)$/i;
+const SERIE_LABEL_PATTERN = /^SERIE:\s*(.+)$/i;
+
 function normalizePosition(raw: string): PlatePosition | null {
   const clean = raw.trim().toLowerCase();
   return POSITION_NORMALIZE[clean] ?? null;
 }
 
+function buildParsed(text: string, serie: string, posicion: string): ParsedQrData {
+  return {
+    serie,
+    posicion,
+    posicionNormalizada: normalizePosition(posicion),
+    complementaria: text,
+    raw: text,
+  };
+}
+
+/**
+ * Format: "GUL-550-G * GUANAJUATO * ... * PLACA TRASERA * 00048 * ..."
+ * The serie is the first segment and the position is the segment starting with "PLACA".
+ */
+function parseAsteriskFormat(text: string): { serie: string; posicion: string } | null {
+  if (!text.includes('*')) return null;
+  const segments = text
+    .split('*')
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+  if (segments.length === 0) return null;
+
+  const serie = (segments[0].match(SERIE_LABEL_PATTERN)?.[1] ?? segments[0]).trim();
+  const posicion = segments
+    .map((segment) => segment.match(ASTERISK_PLACA_PATTERN)?.[1])
+    .find((value): value is string => value !== undefined)
+    ?.trim();
+  if (!serie || !posicion) return null;
+  return { serie, posicion };
+}
+
 /**
  * Parses QR content like:
  * "SERIE: 72SHE1, GOB DE NUEVO LEON, FAB: FORMAS INTELIGENTES S.A. DE C.V., REG: SICT/FPyC/16/034, PLACA TRASERA, LOTE:00033, SERV: TRANSPORTE PRIVADO MOTOCICLETA, VIG: 2027, FAB:2024"
- *
- * Extracts:
- * - Serie (from "SERIE:" label)
- * - Posicion (from "PLACA DELANTERA" / "PLACA TRASERA" pattern or explicit "POSICION:")
- * - Complementaria (the full raw string minus the serie)
+ * or the asterisk-separated format described in parseAsteriskFormat.
  */
 export function parseQrContent(raw: string): ParsedQrData {
   const text = raw.trim();
 
-  // Extract serie: look for "SERIE:" followed by value until next comma or "PLACA"
+  const asterisk = parseAsteriskFormat(text);
+  if (asterisk) return buildParsed(text, asterisk.serie, asterisk.posicion);
+
   let serie = '';
   const serieMatch = text.match(/SERIE:\s*([^,]+)/i);
   if (serieMatch) {
     serie = serieMatch[1].trim();
   }
 
-  // Extract posicion: look for "PLACA DELANTERA" / "PLACA TRASERA" or "POSICION: DELANTERA"
   let posicion = '';
   const placaMatch = text.match(/PLACA\s+(DELANTERA|TRASERA|FRONTAL|POSTERIOR|FRENTE|ATRAS|FRONT|BACK)/i);
   if (placaMatch) {
@@ -60,16 +91,7 @@ export function parseQrContent(raw: string): ParsedQrData {
     }
   }
 
-  // Build complementaria: the full string for reference
-  const complementaria = text;
-
-  return {
-    serie,
-    posicion,
-    posicionNormalizada: normalizePosition(posicion),
-    complementaria,
-    raw: text,
-  };
+  return buildParsed(text, serie, posicion);
 }
 
 /**
