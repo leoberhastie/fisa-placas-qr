@@ -13,6 +13,7 @@ import {
 } from '@/services/serviceBoxImportService';
 import type { ServiceType } from '@/types/domain';
 import { getServiceParcialidadInfo, type ServiceParcialidadInfo } from '@/services/operationService';
+import { formatPercent } from '@/lib/percentFormat';
 
 interface ServiceBoxImportPanelProps {
   productionId: string;
@@ -429,12 +430,12 @@ function ParcialidadAlert({ info }: { info: ServiceParcialidadInfo }) {
 }
 
 function BoxImportProgress({ progress }: { progress: ServiceBoxImportProgress }) {
-  const percentage = progress.totalBoxes === 0 ? 0 : Math.round((progress.processedBoxes / progress.totalBoxes) * 100);
+  const percentage = progress.totalBoxes === 0 ? 0 : (progress.processedBoxes / progress.totalBoxes) * 100;
   return (
     <div className="space-y-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-3 text-sm text-accent">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Asignando cajas</span>
-        <span className="font-semibold tabular-nums">{percentage}%</span>
+        <span className="font-semibold tabular-nums">{formatPercent(percentage)}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-accent/15"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${percentage}%` }} /></div>
       <p className="text-xs text-accent">Lote {progress.batchIndex} de {progress.totalBatches} · {progress.processedBoxes.toLocaleString('es-MX')} de {progress.totalBoxes.toLocaleString('es-MX')} cajas</p>

@@ -12,6 +12,7 @@ import {
   type MasterServiceSheet,
 } from '@/services/masterImportService';
 import type { ServiceType } from '@/types/domain';
+import { formatPercent } from '@/lib/percentFormat';
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('es-MX', {
   day: '2-digit',
@@ -233,12 +234,12 @@ export function ExcelImportSection() {
 }
 
 function ImportProgress({ progress }: { progress: MasterImportProgress }) {
-  const percentage = progress.totalSeries === 0 ? 0 : Math.round((progress.processedSeries / progress.totalSeries) * 100);
+  const percentage = progress.totalSeries === 0 ? 0 : (progress.processedSeries / progress.totalSeries) * 100;
   return (
     <div className="space-y-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-3 text-sm text-accent">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Importando {progress.serviceName}</span>
-        <span className="font-semibold tabular-nums">{percentage}%</span>
+        <span className="font-semibold tabular-nums">{formatPercent(percentage)}</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-accent/15"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${percentage}%` }} /></div>
       <p className="text-xs text-accent">Servicio {progress.serviceIndex} de {progress.totalServices} · lote {progress.batchIndex} de {progress.totalBatches} · {progress.processedSeries.toLocaleString('es-MX')} de {progress.totalSeries.toLocaleString('es-MX')} series</p>

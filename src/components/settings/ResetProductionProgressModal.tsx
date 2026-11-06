@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, Circle, Loader2, ShieldCheck } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import type { ResetStepProgress } from '@/services/productionResetService';
+import { formatPercent } from '@/lib/percentFormat';
 
 export type ResetRunStatus = 'running' | 'success' | 'error';
 
@@ -14,7 +15,7 @@ interface ResetProductionProgressModalProps {
 
 export function ResetProductionProgressModal({ title, steps, status, error, onClose }: ResetProductionProgressModalProps) {
   const verified = steps.filter((step) => step.status === 'verificado').length;
-  const percentage = steps.length === 0 ? 0 : Math.round((verified / steps.length) * 100);
+  const percentage = steps.length === 0 ? 0 : (verified / steps.length) * 100;
   const running = status === 'running';
 
   return (
@@ -25,7 +26,7 @@ export function ResetProductionProgressModal({ title, steps, status, error, onCl
             <span className="font-semibold text-primary">
               {status === 'success' ? 'Reinicio completado y verificado' : status === 'error' ? 'El reinicio se detuvo' : 'Reiniciando datos...'}
             </span>
-            <span className="font-semibold tabular-nums text-primary">{percentage}%</span>
+            <span className="font-semibold tabular-nums text-primary">{formatPercent(percentage)}</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-muted">
             <div

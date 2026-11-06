@@ -51,7 +51,7 @@ export function ManagerDashboardPage({ onNavigate }: ScreenProps) {
       { label: 'Reoperaciones pendientes', value: metrics.reoperacionesPendientes },
       { label: 'Total histórico de reoperaciones', value: metrics.totalReoperaciones },
       { label: 'Total de recuperaciones', value: metrics.totalRecuperaciones },
-      { label: 'Porcentaje de recuperación', value: `${metrics.porcentajeRecuperacion}%` },
+      { label: 'Porcentaje de recuperación', value: formatPercent(metrics.porcentajeRecuperacion) },
       { label: 'Cajas pendientes', value: metrics.cajasPendientes },
       { label: 'Cajas completas', value: metrics.cajasCompletas },
       { label: 'Servicios pendientes', value: metrics.serviciosPendientes },
@@ -122,7 +122,7 @@ export function ManagerDashboardPage({ onNavigate }: ScreenProps) {
             {services.length === 0 ? (
               <p className="text-sm text-muted-foreground">{loading ? 'Cargando datos...' : 'Esta producción aún no tiene placas.'}</p>
             ) : (
-              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <div className="flex flex-col gap-6">
                 {services.map((service) => (
                   <ServiceRecoveryCard key={service.servicio} service={service} />
                 ))}
