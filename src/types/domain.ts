@@ -55,6 +55,15 @@ export function placaLabel(placa: Pick<Placa, 'serie' | 'posicion'>): string {
 
 export type ReoperationProcess = 'Impresion' | 'Sticker' | 'Brotech' | 'Blanking' | 'Embossing';
 
+export const ANULACION_MOTIVOS = [
+  'Anotación errónea',
+  'Proceso seleccionado incorrecto',
+  'Placa marcada por duplicado',
+  'Otro',
+] as const;
+
+export type AnulacionMotivo = (typeof ANULACION_MOTIVOS)[number];
+
 export const REOPERATION_PROCESSES: ReoperationProcess[] = [
   'Impresion',
   'Sticker',
