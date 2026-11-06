@@ -29,6 +29,7 @@ import {
   createReoperation,
   createRecuperacion,
   insertHistorial,
+  anularReoperacionesPlaca,
 } from '@/services/operationService';
 import { type PlatePosition } from '@/types/domain';
 
@@ -196,6 +197,28 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
           estado_anterior: '',
           estado_nuevo: 'completo',
           observaciones,
+        });
+        void reload();
+        closeModal();
+      } finally {
+        submittingRef.current = false;
+      }
+    },
+    [selectedProductionId, displayName, userEmail, reload, closeModal],
+  );
+
+  const handleAnularReoperaciones = useCallback(
+    async (placaId: string, motivo: string) => {
+      if (!selectedProductionId) return;
+      if (submittingRef.current) return;
+      submittingRef.current = true;
+      try {
+        await anularReoperacionesPlaca({
+          produccion_id: selectedProductionId,
+          placa_id: placaId,
+          motivo,
+          operador: displayName,
+          usuario: userEmail,
         });
         void reload();
         closeModal();
@@ -441,6 +464,7 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
           onClose={closeModal}
           onRegisterReoperation={handleRegisterReoperation}
           onRegisterRecuperacion={handleRegisterRecuperacion}
+          onAnularReoperaciones={handleAnularReoperaciones}
         />
       )}
 

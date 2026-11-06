@@ -308,6 +308,27 @@ export async function cerrarReoperacionManual(input: CierreManualInput): Promise
   if (histErr) throw new Error('No se pudo registrar en el historial.');
 }
 
+export interface AnularReoperacionesInput {
+  produccion_id: string;
+  placa_id: string;
+  motivo: string;
+  operador: string;
+  usuario: string;
+}
+
+export async function anularReoperacionesPlaca(input: AnularReoperacionesInput): Promise<number> {
+  const { data, error } = await supabase.rpc('anular_reoperaciones_placa', {
+    p_produccion_id: input.produccion_id,
+    p_placa_id: input.placa_id,
+    p_motivo: input.motivo,
+    p_operador: input.operador,
+    p_usuario: input.usuario,
+  });
+  if (error) throw new Error(error.message || 'No se pudo anular la reoperación.');
+  if (typeof data !== 'number') throw new Error('No se pudo anular la reoperación.');
+  return data;
+}
+
 // =========================================================
 // RECUPERACIONES
 // =========================================================

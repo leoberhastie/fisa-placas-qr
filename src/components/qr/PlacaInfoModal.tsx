@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { AlertCircle, Loader2, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Loader2, RotateCcw, ShieldCheck, Undo2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
-import { REOPERATION_PROCESSES, type Placa } from '@/types/domain';
+import { ANULACION_MOTIVOS, REOPERATION_PROCESSES, type AnulacionMotivo, type Placa } from '@/types/domain';
 import type { ParsedQrData } from '@/services/qrService';
 
 export interface PlacaInfo {
@@ -18,18 +18,20 @@ interface PlacaInfoModalProps {
   onClose: () => void;
   onRegisterReoperation: (placaId: string | null, proceso: string, observaciones: string) => Promise<void>;
   onRegisterRecuperacion: (placaId: string | null, tipoRecuperacion: string, observaciones: string) => Promise<void>;
+  onAnularReoperaciones: (placaId: string, motivo: AnulacionMotivo) => Promise<void>;
 }
 
 const INPUT_CLASS =
   'w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20';
 
-type ViewMode = 'info' | 'reoperacion' | 'recuperacion';
+type ViewMode = 'info' | 'reoperacion' | 'recuperacion' | 'anulacion';
 
-export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegisterRecuperacion }: PlacaInfoModalProps) {
+export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegisterRecuperacion, onAnularReoperaciones }: PlacaInfoModalProps) {
   const [mode, setMode] = useState<ViewMode>('info');
   const [proceso, setProceso] = useState<string>(REOPERATION_PROCESSES[0]);
   const [tipoRecuperacion, setTipoRecuperacion] = useState('Recuperación en inspección');
   const [observaciones, setObservaciones] = useState('');
+  const [motivoAnulacion, setMotivoAnulacion] = useState<AnulacionMotivo>(ANULACION_MOTIVOS[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +42,9 @@ export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegiste
     setError(null);
     setSubmitting(true);
     try {
-      if (mode === 'reoperacion') {
+      if (mode === 'anulacion') {
+        if (p) await onAnularReoperaciones(p.id, motivoAnulacion);
+      } else if (mode === 'reoperacion') {
         await onRegisterReoperation(p?.id ?? null, proceso, observaciones);
       } else {
         await onRegisterRecuperacion(p?.id ?? null, tipoRecuperacion, observaciones);
@@ -55,7 +59,7 @@ export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegiste
 
   return (
     <Modal
-      title={info.notFound ? 'Placa no encontrada' : mode === 'info' ? 'Información de la placa' : isRecuperacion ? 'Registrar recuperación' : 'Registrar reoperación'}
+      title={info.notFound ? 'Placa no encontrada' : mode === 'info' ? 'Información de la placa' : mode === 'anulacion' ? 'Quitar reoperación' : isRecuperacion ? 'Registrar recuperación' : 'Registrar reoperación'}
       onClose={onClose}
       closeDisabled={submitting}
     >
@@ -124,7 +128,20 @@ export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegiste
                 <ShieldCheck className="h-4 w-4" />
                 Recuperar
               </button>
+              <button
+                type="button"
+                onClick={() => setMode('anulacion')}
+                disabled={info.notFound || info.reopsCount === 0 || info.recuperacionesCount > 0}
+                title={info.recuperacionesCount > 0 ? 'La placa ya fue recuperada' : info.reopsCount === 0 ? 'La placa no tiene reoperaciones registradas' : undefined}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-destructive/40 bg-card px-4 py-3 text-sm font-semibold text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Undo2 className="h-4 w-4" />
+                Quitar reoperación
+              </button>
             </div>
+            {info.recuperacionesCount > 0 && (
+              <p className="text-xs text-muted-foreground">Esta placa ya fue recuperada, por eso sus reoperaciones no se pueden quitar.</p>
+            )}
           </>
         )}
 
@@ -166,6 +183,38 @@ export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegiste
               confirmLabel="Confirmar reoperación"
               tone="warning"
               icon={RotateCcw}
+            />
+          </form>
+        )}
+
+        {p && mode === 'anulacion' && (
+          <form onSubmit={submit} className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-primary">Quitar placa de las reoperaciones</p>
+              <p className="mt-1 text-xs text-muted-foreground">Placa {p.serie} · {p.posicion} · {info.reopsCount} reoperación(es) registrada(s)</p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Estas reoperaciones dejarán de contar en las métricas y quedarán guardadas en el registro de anulaciones.
+            </p>
+            <div className="space-y-2">
+              <label htmlFor="motivo-anulacion" className="block text-sm font-medium text-foreground/80">Motivo</label>
+              <select
+                id="motivo-anulacion"
+                value={motivoAnulacion}
+                onChange={(e) => setMotivoAnulacion(e.target.value as AnulacionMotivo)}
+                className={INPUT_CLASS}
+              >
+                {ANULACION_MOTIVOS.map((motivo) => (
+                  <option key={motivo} value={motivo}>{motivo}</option>
+                ))}
+              </select>
+            </div>
+            <FormActions
+              submitting={submitting}
+              onBack={() => setMode('info')}
+              confirmLabel="Confirmar anulación"
+              tone="destructive"
+              icon={Undo2}
             />
           </form>
         )}
@@ -217,10 +266,14 @@ function FormActions({
   submitting: boolean;
   onBack: () => void;
   confirmLabel: string;
-  tone: 'warning' | 'success';
+  tone: 'warning' | 'success' | 'destructive';
   icon: typeof RotateCcw;
 }) {
-  const toneClass = tone === 'warning' ? 'bg-warning hover:bg-warning' : 'bg-success hover:bg-success';
+  const toneClass = tone === 'warning'
+    ? 'bg-warning hover:bg-warning'
+    : tone === 'success'
+      ? 'bg-success hover:bg-success'
+      : 'bg-destructive hover:bg-destructive';
   return (
     <div className="flex gap-3">
       <button
