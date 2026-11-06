@@ -9,6 +9,7 @@ import { ManualPage } from '@/pages/ManualPage';
 import { ManagerDashboardPage } from '@/pages/ManagerDashboardPage';
 import { QrReaderPage } from '@/pages/QrReaderPage';
 import { ReoperationsPage } from '@/pages/ReoperationsPage';
+import { ActiveAnalyticsPage } from '@/pages/ActiveAnalyticsPage';
 import { ReportsPage } from '@/pages/ReportsPage';
 import { ServicesPage } from '@/pages/ServicesPage';
 import { SettingsPage } from '@/pages/SettingsPage';
@@ -30,6 +31,7 @@ const SCREEN_BY_PATH: Record<string, ComponentType<ScreenProps>> = {
   '/cajas': BoxesPage,
   '/historial': HistoryPage,
   '/reportes': ReportsPage,
+  '/analisis-global': ActiveAnalyticsPage,
   '/manual': ManualPage,
 };
 

@@ -3,6 +3,7 @@ import {
   ClipboardList,
   FileBarChart,
   Gauge,
+  Globe,
   History,
   Layers,
   LayoutDashboard,
@@ -31,6 +32,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/cajas', label: 'Cajas con reoperaciones', shortLabel: 'Cajas', icon: Package, roles: ['admin', 'operador', 'gerente'] },
   { path: '/historial', label: 'Historial', shortLabel: 'Historial', icon: History, roles: ['admin', 'operador', 'gerente'] },
   { path: '/reportes', label: 'Reportes', shortLabel: 'Reportes', icon: FileBarChart, roles: ['admin', 'gerente'] },
+  { path: '/analisis-global', label: 'Análisis global', shortLabel: 'Global', icon: Globe, roles: ['admin', 'gerente'] },
   { path: '/manual', label: 'Manual de usuario', shortLabel: 'Manual', icon: BookOpen, roles: ['admin', 'operador', 'gerente'] },
 ];
 
