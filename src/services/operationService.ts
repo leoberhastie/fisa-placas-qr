@@ -88,6 +88,7 @@ export async function findPlaca(
 export interface ServiceBox {
   numero_caja: string;
   placas: number;
+  placas_reoperadas: number;
 }
 
 export async function listServiceBoxes(produccionId: string, servicio: string): Promise<ServiceBox[]> {
@@ -96,7 +97,11 @@ export async function listServiceBoxes(produccionId: string, servicio: string): 
     p_servicio: servicio,
   });
   if (error || !Array.isArray(data)) throw new Error('No se pudieron cargar las cajas del servicio.');
-  return data.map((row) => ({ numero_caja: String(row.numero_caja), placas: Number(row.placas) }));
+  return data.map((row) => ({
+    numero_caja: String(row.numero_caja),
+    placas: Number(row.placas),
+    placas_reoperadas: Number(row.placas_reoperadas),
+  }));
 }
 
 export async function listPlacasByBox(produccionId: string, servicio: string, numeroCaja: string): Promise<Placa[]> {

@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { MetricStatus, ServiceType } from '@/lib/metricsTypes';
-import type { BoxMetrics, ServiceMetrics } from '@/lib/operationMetrics';
+import { percent, type BoxMetrics, type ServiceMetrics } from '@/lib/operationMetrics';
 import type { PlacaMovementRow } from '@/lib/placaMovements';
 
 export interface ProductionMetrics {
@@ -149,11 +149,11 @@ export async function fetchProductionMetrics(produccionId: string): Promise<Prod
     totalPlacas: Number(d.totalPlacas ?? 0),
     placasAfectadas: Number(d.placasAfectadas ?? 0),
     placasConPendientes: Number(d.placasConPendientes ?? 0),
-    porcentajePlacasAfectadas: Number(d.porcentajePlacasAfectadas ?? 0),
+    porcentajePlacasAfectadas: percent(Number(d.placasAfectadas ?? 0), Number(d.totalPlacas ?? 0)),
     totalReoperaciones: Number(d.totalReoperaciones ?? 0),
     reoperacionesPendientes: Number(d.reoperacionesPendientes ?? 0),
     totalRecuperaciones: Number(d.totalRecuperaciones ?? 0),
-    porcentajeRecuperacion: Number(d.porcentajeRecuperacion ?? 0),
+    porcentajeRecuperacion: percent(Number(d.totalReoperaciones ?? 0) - Number(d.reoperacionesPendientes ?? 0), Number(d.totalReoperaciones ?? 0)),
     cajasConReoperaciones: Number(d.cajasConReoperaciones ?? 0),
     cajasPendientes: Number(d.cajasPendientes ?? 0),
     cajasCompletas: Number(d.cajasCompletas ?? 0),
@@ -184,7 +184,7 @@ export async function fetchServiceMetrics(produccionId: string): Promise<Service
     reoperaciones: Number(row.reoperaciones),
     pendientes: Number(row.pendientes),
     recuperaciones: Number(row.recuperaciones),
-    porcentajeRecuperacion: Number(row.porcentaje_recuperacion),
+    porcentajeRecuperacion: percent(Number(row.reoperaciones) - Number(row.pendientes), Number(row.reoperaciones)),
     estado: toMetricStatus(String(row.estado)),
     boxes: [],
   }));

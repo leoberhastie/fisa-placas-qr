@@ -71,17 +71,31 @@ export function BoxCardStep({ boxes, onSelect }: BoxCardStepProps) {
         <EmptyText text="Ninguna caja coincide con la búsqueda." />
       ) : (
         <div className="grid max-h-[50vh] grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-3 overflow-y-auto pr-1">
-          {filtered.map((b) => (
-            <button
-              key={b.numero_caja}
-              type="button"
-              onClick={() => onSelect(b.numero_caja)}
-              className="flex flex-col items-start gap-1.5 rounded-xl border border-border bg-card px-4 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md active:scale-[0.98]"
-            >
-              <span className="text-2xl font-bold leading-none text-primary">{b.numero_caja}</span>
-              <span className="text-xs text-muted-foreground">{b.placas} piezas</span>
-            </button>
-          ))}
+          {filtered.map((b) => {
+            const hasReoperations = b.placas_reoperadas > 0;
+            return (
+              <button
+                key={b.numero_caja}
+                type="button"
+                onClick={() => onSelect(b.numero_caja)}
+                className={`flex flex-col items-start gap-1.5 rounded-xl border px-4 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] ${
+                  hasReoperations
+                    ? 'border-warning/50 bg-warning/10 hover:border-warning'
+                    : 'border-border bg-card hover:border-accent'
+                }`}
+              >
+                <span className={`text-2xl font-bold leading-none ${hasReoperations ? 'text-warning' : 'text-primary'}`}>
+                  {b.numero_caja}
+                </span>
+                <span className="text-xs text-muted-foreground">{b.placas} piezas</span>
+                {hasReoperations && (
+                  <span className="rounded-full border border-warning/40 bg-card px-2 py-0.5 text-[11px] font-semibold text-foreground">
+                    Con reoperación
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

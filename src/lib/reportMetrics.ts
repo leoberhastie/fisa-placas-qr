@@ -1,4 +1,4 @@
-import { computeMetrics, type MetricStatus, type ProductionMetrics } from '@/lib/operationMetrics';
+import { computeMetrics, percent, type MetricStatus, type ProductionMetrics } from '@/lib/operationMetrics';
 import { toDateKey } from '@/lib/dateKey';
 import type { Placa, Recuperacion, Reoperation, ServiceType } from '@/types/domain';
 
@@ -87,7 +87,7 @@ export function servicioGeneral(input: ReportInput): ServicioGeneralRow[] {
     recuperadas: service.reoperaciones - service.pendientes,
     pendientes: service.pendientes,
     recuperaciones: service.recuperaciones,
-    porcentajeTotal: totalReoperaciones === 0 ? 0 : Math.round((service.reoperaciones / totalReoperaciones) * 1000) / 10,
+    porcentajeTotal: percent(service.reoperaciones, totalReoperaciones),
   }));
 }
 
