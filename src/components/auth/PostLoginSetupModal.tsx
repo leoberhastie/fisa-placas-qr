@@ -172,7 +172,7 @@ function ProductionRadioCard({
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-semibold text-foreground">{label}</p>
-        <p className="truncate text-xs text-muted-foreground">{production.code}</p>
+        <p className="truncate text-xs text-muted-foreground">{production.description}</p>
       </div>
       <span
         className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
