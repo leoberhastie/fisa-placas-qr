@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AlertCircle, Loader2, Upload } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { ServiceBoxImportPanel } from '@/components/import/ServiceBoxImportPanel';
+import { ServiceBoxRangeAssigner } from '@/components/import/ServiceBoxRangeAssigner';
 import { listServiceSummaries, type ServiceSummary } from '@/services/serviceBoxImportService';
 import type { ServiceType } from '@/types/domain';
 
@@ -19,6 +20,8 @@ const TIPO_LABELS: Record<ServiceType, string> = {
   JGS: 'Juego (JGS)',
 };
 
+type BoxMethod = 'rango' | 'excel';
+
 const TIPO_BADGE_CLASSES: Record<ServiceType, string> = {
   PZ: 'bg-accent/10 text-accent ring-accent/40',
   JGS: 'bg-success/10 text-success ring-success/30',
@@ -29,6 +32,7 @@ export function ServiceBoxImportList({ productionId }: ServiceBoxImportListProps
   const [error, setError] = useState<string | null>(null);
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
+  const [method, setMethod] = useState<BoxMethod>('rango');
 
   useEffect(() => {
     let active = true;
@@ -102,7 +106,10 @@ export function ServiceBoxImportList({ productionId }: ServiceBoxImportListProps
 
               <button
                 type="button"
-                onClick={() => setSelectedName(service.servicio)}
+                onClick={() => {
+                  setMethod('rango');
+                  setSelectedName(service.servicio);
+                }}
                 className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary"
               >
                 <Upload className="h-4 w-4" />
@@ -115,13 +122,38 @@ export function ServiceBoxImportList({ productionId }: ServiceBoxImportListProps
 
       {selected && (
         <Modal title={`Cajas de ${selected.servicio}`} onClose={() => setSelectedName(null)} size="wide">
-          <div className="p-6">
-            <ServiceBoxImportPanel
-              productionId={productionId}
-              servicio={selected.servicio}
-              tipo={selected.tipo}
-              onImported={() => setVersion((value) => value + 1)}
-            />
+          <div className="space-y-6 p-6">
+            <div role="tablist" className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm font-semibold">
+              {(['rango', 'excel'] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  role="tab"
+                  aria-selected={method === option}
+                  onClick={() => setMethod(option)}
+                  className={`rounded-md px-3 py-2 transition-colors ${
+                    method === option ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  {option === 'rango' ? 'Asignar por placas' : 'Importar desde Excel'}
+                </button>
+              ))}
+            </div>
+            {method === 'rango' ? (
+              <ServiceBoxRangeAssigner
+                productionId={productionId}
+                servicio={selected.servicio}
+                tipo={selected.tipo}
+                onAssigned={() => setVersion((value) => value + 1)}
+              />
+            ) : (
+              <ServiceBoxImportPanel
+                productionId={productionId}
+                servicio={selected.servicio}
+                tipo={selected.tipo}
+                onImported={() => setVersion((value) => value + 1)}
+              />
+            )}
           </div>
         </Modal>
       )}
