@@ -23,6 +23,11 @@ export interface ProductionMetrics {
   serviciosCompletos: number;
 }
 
+export interface ProcesoReoperacionTotal {
+  proceso: string;
+  total: number;
+}
+
 export interface ServiceMetricRow extends Omit<ServiceMetrics, 'boxes'> {
   boxes: BoxMetrics[];
   servicio: string;
@@ -36,10 +41,12 @@ export interface ServiceMetricRow extends Omit<ServiceMetrics, 'boxes'> {
   cajasEnProceso: number;
   cajasCompletadasRo: number;
   placasAfectadas: number;
+  placasPendientes: number;
   reoperaciones: number;
   pendientes: number;
   recuperaciones: number;
   porcentajeRecuperacion: number;
+  procesos: ProcesoReoperacionTotal[];
   estado: MetricStatus;
 }
 
@@ -166,11 +173,34 @@ export async function fetchProductionMetrics(produccionId: string): Promise<Prod
   };
 }
 
+async function fetchServiceReoperationBreakdown(
+  produccionId: string,
+): Promise<Map<string, { placasPendientes: number; procesos: ProcesoReoperacionTotal[] }>> {
+  const { data, error } = await supabase.rpc('get_service_reoperation_breakdown', { p_produccion_id: produccionId });
+  if (error || !Array.isArray(data)) throw new Error('No se pudo cargar el desglose de reoperaciones.');
+  return new Map(
+    data.map((row: Record<string, unknown>) => [
+      String(row.servicio),
+      {
+        placasPendientes: Number(row.placas_pendientes),
+        procesos: Array.isArray(row.procesos)
+          ? (row.procesos as Record<string, unknown>[]).map((p) => ({ proceso: String(p.proceso), total: Number(p.total) }))
+          : [],
+      },
+    ]),
+  );
+}
+
 export async function fetchServiceMetrics(produccionId: string): Promise<ServiceMetricRow[]> {
-  const { data, error } = await supabase.rpc('get_service_metrics', { p_produccion_id: produccionId });
+  const [{ data, error }, breakdown] = await Promise.all([
+    supabase.rpc('get_service_metrics', { p_produccion_id: produccionId }),
+    fetchServiceReoperationBreakdown(produccionId),
+  ]);
   if (error || !Array.isArray(data)) throw new Error('No se pudieron cargar las métricas de servicios.');
   return data.map((row: Record<string, unknown>) => ({
     servicio: String(row.servicio),
+    placasPendientes: breakdown.get(String(row.servicio))?.placasPendientes ?? 0,
+    procesos: breakdown.get(String(row.servicio))?.procesos ?? [],
     tipoServicio: (row.tipo_servicio === 'JGS' ? 'JGS' : 'PZ') as ServiceType,
     series: Number(row.series),
     placas: Number(row.placas),

@@ -14,7 +14,7 @@ import { SelectedProductionBanner } from '@/components/productions/SelectedProdu
 import { DataUpdatedAlert } from '@/components/import/DataUpdatedAlert';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { DonutChart } from '@/components/metrics/DonutChart';
+import { ServiceRecoveryCard } from '@/components/metrics/ServiceRecoveryCard';
 import { useProductionSelection } from '@/context/ProductionSelectionContext';
 import { useProductionMetrics } from '@/hooks/useProductionMetrics';
 import { PageLoader } from '@/components/ui/PageLoader';
@@ -118,20 +118,13 @@ export function ManagerDashboardPage({ onNavigate }: ScreenProps) {
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <h2 className="text-base font-semibold text-primary">Recuperación por servicio</h2>
-            <p className="mb-6 text-sm text-muted-foreground">Porcentaje de movimientos de reoperación ya resueltos.</p>
+            <p className="mb-6 text-sm text-muted-foreground">Avance de placas reoperadas, cajas y proceso de cada servicio.</p>
             {services.length === 0 ? (
               <p className="text-sm text-muted-foreground">{loading ? 'Cargando datos...' : 'Esta producción aún no tiene placas.'}</p>
             ) : (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 {services.map((service) => (
-                  <div key={service.servicio} className="flex items-center gap-4 rounded-xl border border-border p-4">
-                    <DonutChart percent={service.porcentajeRecuperacion} label={`Recuperación de ${service.servicio}`} />
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-primary">{service.servicio}</p>
-                      <p className="text-sm text-muted-foreground tabular-nums">{service.reoperaciones} reoperaciones</p>
-                      <p className="text-sm text-muted-foreground tabular-nums">{service.pendientes} pendientes</p>
-                    </div>
-                  </div>
+                  <ServiceRecoveryCard key={service.servicio} service={service} />
                 ))}
               </div>
             )}
