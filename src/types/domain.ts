@@ -173,5 +173,5 @@ export function canImportExcel(role: UserRole): boolean {
 }
 
 export function canRegisterOperations(role: UserRole): boolean {
-  return role === 'admin' || role === 'operador';
+  return role === 'admin' || role === 'operador' || role === 'gerente';
 }
