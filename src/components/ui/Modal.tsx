@@ -6,8 +6,14 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   closeDisabled?: boolean;
-  size?: 'default' | 'wide';
+  size?: 'default' | 'wide' | 'full';
 }
+
+const DIALOG_SIZE_CLASS = {
+  default: 'max-w-lg',
+  wide: 'max-w-7xl',
+  full: 'max-w-none',
+} as const;
 
 export function Modal({ title, onClose, children, closeDisabled = false, size = 'default' }: ModalProps) {
   useEffect(() => {
@@ -18,13 +24,21 @@ export function Modal({ title, onClose, children, closeDisabled = false, size = 
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose, closeDisabled]);
 
+  const isFull = size === 'full';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-primary/60 backdrop-blur-sm sm:items-center sm:p-6">
+    <div
+      className={`fixed inset-0 z-50 flex items-end justify-center bg-primary/60 backdrop-blur-sm sm:items-center ${
+        isFull ? 'p-2 sm:p-4' : 'sm:p-6'
+      }`}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className={`max-h-[94vh] w-full animate-[modal-in_200ms_ease-out] overflow-y-auto rounded-t-2xl bg-card shadow-xl sm:rounded-2xl ${size === 'wide' ? 'max-w-7xl' : 'max-w-lg'}`}
+        className={`w-full animate-[modal-in_200ms_ease-out] overflow-y-auto rounded-t-2xl bg-card shadow-xl sm:rounded-2xl ${
+          isFull ? 'max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)]' : 'max-h-[94vh]'
+        } ${DIALOG_SIZE_CLASS[size]}`}
       >
         <div className="sticky top-0 flex items-center justify-between border-b border-border/60 bg-card px-6 py-4">
           <h2 id="modal-title" className="text-lg font-semibold text-primary">

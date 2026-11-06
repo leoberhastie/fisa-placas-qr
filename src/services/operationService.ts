@@ -120,6 +120,21 @@ export async function listPlacasByBox(produccionId: string, servicio: string, nu
   );
 }
 
+export async function listPendingReoperacionPlacaIds(produccionId: string): Promise<string[]> {
+  const rows = await fetchAllPages<{ placa_id: string | null }>(
+    (from, to) =>
+      supabase
+        .from('reoperaciones')
+        .select('placa_id')
+        .eq('produccion_id', produccionId)
+        .eq('estado', 'pendiente')
+        .order('id', { ascending: true })
+        .range(from, to),
+    'No se pudieron cargar las reoperaciones pendientes.',
+  );
+  return rows.map((row) => row.placa_id).filter((id): id is string => Boolean(id));
+}
+
 export interface ServiceParcialidadInfo {
   total_parcialidades: number;
   total_cajas_asignadas: number;

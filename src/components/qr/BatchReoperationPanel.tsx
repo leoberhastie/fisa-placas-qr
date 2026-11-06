@@ -22,6 +22,7 @@ import {
 import {
   createReoperacionesBatch,
   insertHistorialBatch,
+  listPendingReoperacionPlacaIds,
   listPlacasByBox,
   listServiceBoxes,
   type ReoperationInput,
@@ -81,6 +82,7 @@ export function BatchReoperationPanel({
   const [numeroCaja, setNumeroCaja] = useState('');
   const [placas, setPlacas] = useState<Placa[]>([]);
   const [placasLoading, setPlacasLoading] = useState(false);
+  const [pendingPlacaIds, setPendingPlacaIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('rango');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [rangeStart, setRangeStart] = useState('');
@@ -142,9 +144,10 @@ export function BatchReoperationPanel({
     }
     setPlacasLoading(true);
     setError(null);
-    listPlacasByBox(produccionId, servicio, numeroCaja)
-      .then((data) => {
+    Promise.all([listPlacasByBox(produccionId, servicio, numeroCaja), listPendingReoperacionPlacaIds(produccionId)])
+      .then(([data, pendingIds]) => {
         setPlacas(data);
+        setPendingPlacaIds(new Set(pendingIds));
         setSelectedIds(new Set());
         setRangeStart('');
         setRangeEnd('');
@@ -249,7 +252,7 @@ export function BatchReoperationPanel({
         title="Reoperación por lote"
         onClose={handleClose}
         closeDisabled={submitting}
-        size="lg"
+        size="full"
       >
         <div className="space-y-5 px-5 py-5">
           {error && (
@@ -374,7 +377,12 @@ export function BatchReoperationPanel({
                           </button>
                         )}
                       </div>
-      <PlacaSeriesGrid placas={placas} selectedIds={selectedIds} onToggle={toggleManual} />
+                      <PlacaSeriesGrid
+                        placas={placas}
+                        selectedIds={selectedIds}
+                        pendingIds={pendingPlacaIds}
+                        onToggle={toggleManual}
+                      />
                     </>
                   )}
                 </>
