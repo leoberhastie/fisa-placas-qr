@@ -1,3 +1,5 @@
+import { formatPercent } from '@/lib/percentFormat';
+
 interface DonutChartProps {
   percent: number;
   size?: number;
@@ -29,7 +31,7 @@ export function DonutChart({ percent, size = 96, label }: DonutChartProps) {
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-base font-semibold tabular-nums text-primary">{clamped}%</span>
+        <span className="text-base font-semibold tabular-nums text-primary">{formatPercent(clamped)}</span>
       </div>
     </div>
   );

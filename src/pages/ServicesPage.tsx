@@ -17,6 +17,7 @@ import { useProductionMetrics } from '@/hooks/useProductionMetrics';
 import { DataUpdatedAlert } from '@/components/import/DataUpdatedAlert';
 import { PageLoader } from '@/components/ui/PageLoader';
 import type { MetricStatus, ServiceMetrics } from '@/lib/operationMetrics';
+import { formatPercent } from '@/lib/percentFormat';
 import { getServiceParcialidadInfo, type ServiceParcialidadInfo } from '@/services/operationService';
 
 interface ScreenProps {
@@ -280,7 +281,7 @@ function ServiceAccordionItem({ service, produccionId, isOpen, onToggle, onOpenP
               <MetricStat label="Total de placas" value={service.placas} />
               <MetricStat label="Total de cajas" value={service.cajas} />
               <MetricStat label="Placas afectadas" value={service.placasAfectadas} />
-              <MetricStat label="Porcentaje de recuperación" value={`${service.porcentajeRecuperacion}%`} />
+              <MetricStat label="Porcentaje de recuperación" value={formatPercent(service.porcentajeRecuperacion)} />
             </div>
 
             {parcialidad && (

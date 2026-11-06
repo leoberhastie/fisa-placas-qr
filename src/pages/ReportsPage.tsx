@@ -19,6 +19,7 @@ import { useProductions } from '@/hooks/useProductions';
 import { exportExcel, exportPdf, type ExportChart, type ExportColumn, type ExportMeta } from '@/lib/exportFiles';
 import type { EstadoRow, EvolucionRow, MotivoRow, RecupOperadorRow, RecupServicioRow, ReopServicioProcesoRow, ServicioGeneralRow, TopPlacaRow } from '@/lib/reportMetrics';
 import type { ServiceMetrics } from '@/lib/operationMetrics';
+import { formatPercent } from '@/lib/percentFormat';
 import { SERVICE_EXPORT_COLUMNS } from '@/lib/operationExportColumns';
 import { productionDisplayLabel } from '@/types/domain';
 
@@ -45,7 +46,7 @@ const SERVICIO_GENERAL_COLUMNS: ExportColumn<ServicioGeneralRow>[] = [
   { header: 'Recuperadas', value: (r) => r.recuperadas },
   { header: 'Pendientes', value: (r) => r.pendientes },
   { header: 'Recuperaciones registradas', value: (r) => r.recuperaciones },
-  { header: '% del total', value: (r) => `${r.porcentajeTotal}%` },
+  { header: '% del total', value: (r) => formatPercent(r.porcentajeTotal) },
 ];
 
 const RECUP_SERVICIO_COLUMNS: ExportColumn<RecupServicioRow>[] = [
@@ -262,7 +263,7 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
             { header: 'Recuperadas', cell: (r: ServicioGeneralRow) => <span className="tabular-nums text-success">{r.recuperadas}</span> },
             { header: 'Pendientes', cell: (r: ServicioGeneralRow) => <span className="tabular-nums text-warning">{r.pendientes}</span> },
             { header: 'Recuperaciones', cell: (r: ServicioGeneralRow) => <span className="tabular-nums">{r.recuperaciones}</span> },
-            { header: '% del total', cell: (r: ServicioGeneralRow) => <span className="font-semibold tabular-nums">{r.porcentajeTotal}%</span> },
+            { header: '% del total', cell: (r: ServicioGeneralRow) => <span className="font-semibold tabular-nums">{formatPercent(r.porcentajeTotal)}</span> },
           ]}
           rows={servicioGeneralRows}
           getRowKey={(r) => r.servicio}

@@ -1,6 +1,7 @@
 import { BOX_STATUS_LABELS, SERVICE_STATUS_LABELS } from '@/components/metrics/OperationStatusBadge';
 import type { ExportColumn } from '@/lib/exportFiles';
 import type { BoxMetrics, ServiceMetrics } from '@/lib/operationMetrics';
+import { formatPercent } from '@/lib/percentFormat';
 import type { PlacaMovementRow } from '@/lib/placaMovements';
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('es-MX', {
@@ -24,7 +25,7 @@ export const SERVICE_EXPORT_COLUMNS: ExportColumn<ServiceMetrics>[] = [
   { header: 'Reoperaciones', value: (s) => s.reoperaciones },
   { header: 'Recuperaciones', value: (s) => s.recuperaciones },
   { header: 'Pendientes', value: (s) => s.pendientes },
-  { header: 'Porcentaje de recuperación', value: (s) => `${s.porcentajeRecuperacion}%` },
+  { header: 'Porcentaje de recuperación', value: (s) => formatPercent(s.porcentajeRecuperacion) },
   { header: 'Estado', value: (s) => SERVICE_STATUS_LABELS[s.estado] },
 ];
 

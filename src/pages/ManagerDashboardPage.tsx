@@ -22,6 +22,7 @@ import { useProductions } from '@/hooks/useProductions';
 import { exportExcel, exportPdf, type ExportMeta } from '@/lib/exportFiles';
 import { SERVICE_EXPORT_COLUMNS } from '@/lib/operationExportColumns';
 import { ExportMenu } from '@/components/export/ExportMenu';
+import { formatPercent } from '@/lib/percentFormat';
 import { useAuth } from '@/context/AuthContext';
 import { productionDisplayLabel } from '@/types/domain';
 
@@ -66,7 +67,7 @@ export function ManagerDashboardPage({ onNavigate }: ScreenProps) {
 
   const showValues = !loading && !error && selectedProductionId !== null;
   const value = (n: number) => (showValues ? n : null);
-  const pct = (n: number) => (showValues ? `${n}%` : null);
+  const pct = (n: number) => (showValues ? formatPercent(n) : null);
 
   return (
     <div className="space-y-8">
