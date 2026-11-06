@@ -15,27 +15,28 @@ export interface ComparisonRow {
   reoperacionesPendientes: number;
   totalRecuperaciones: number;
   cajasPendientes: number;
+  porcentajeReoperaciones: number;
+}
+
+export interface ProcesoDistribucionRow {
+  proceso: string;
+  total: number;
+  porcentaje: number;
 }
 
 export type EstadoCajaGlobal = ReportData['estadoCajas'][number] & { produccion: string };
-
-export type TopPlacaGlobal = ReportData['topPlacas'][number] & { produccion: string };
 
 export interface ActiveAnalytics {
   productionCount: number;
   totals: ProductionMetrics;
   comparison: ComparisonRow[];
+  distribucionProcesos: ProcesoDistribucionRow[];
   servicioGeneral: ReportData['servicioGeneral'];
   reopsByServicioProceso: ReportData['reopsByServicioProceso'];
   recupsByServicio: ReportData['recupsByServicio'];
   estadoCajas: EstadoCajaGlobal[];
-  topPlacas: TopPlacaGlobal[];
   evolucion: ReportData['evolucion'];
-  recupsPorOperador: ReportData['recupsPorOperador'];
-  incidenciasPorMotivo: ReportData['incidenciasPorMotivo'];
 }
-
-const TOP_PLACAS_LIMIT = 10;
 
 function sumOf<T>(items: T[], pick: (item: T) => number): number {
   return items.reduce((acc, item) => acc + pick(item), 0);
@@ -96,11 +97,30 @@ function mergeServicios(snapshots: ProductionSnapshot[]): ReportData['servicioGe
     .sort((a, b) => a.servicio.localeCompare(b.servicio));
 }
 
+function buildDistribucionProcesos(
+  reopsByServicioProceso: ReportData['reopsByServicioProceso'],
+  placasAfectadas: number,
+): ProcesoDistribucionRow[] {
+  const porProceso = new Map<string, number>();
+  for (const row of reopsByServicioProceso) {
+    porProceso.set(row.proceso, (porProceso.get(row.proceso) ?? 0) + row.total);
+  }
+  return [...porProceso.entries()]
+    .map(([proceso, total]) => ({ proceso, total, porcentaje: percent(total, placasAfectadas) }))
+    .sort((a, b) => b.total - a.total);
+}
+
 export function aggregateActiveProductions(snapshots: ProductionSnapshot[]): ActiveAnalytics {
   const reports = snapshots.map((s) => s.report);
+  const totals = sumMetrics(snapshots.map((s) => s.metrics));
+  const reopsByServicioProceso = mergeBy(
+    reports.flatMap((r) => r.reopsByServicioProceso),
+    (row) => `${row.servicio}|${row.proceso}`,
+    ['total', 'pendientes'],
+  );
   return {
     productionCount: snapshots.length,
-    totals: sumMetrics(snapshots.map((s) => s.metrics)),
+    totals,
     comparison: snapshots.map((s) => ({
       produccion: s.produccion,
       totalPlacas: s.metrics.totalPlacas,
@@ -109,37 +129,21 @@ export function aggregateActiveProductions(snapshots: ProductionSnapshot[]): Act
       reoperacionesPendientes: s.metrics.reoperacionesPendientes,
       totalRecuperaciones: s.metrics.totalRecuperaciones,
       cajasPendientes: s.metrics.cajasPendientes,
+      porcentajeReoperaciones: percent(s.metrics.totalReoperaciones, totals.placasAfectadas),
     })),
+    distribucionProcesos: buildDistribucionProcesos(reopsByServicioProceso, totals.placasAfectadas),
     servicioGeneral: mergeServicios(snapshots),
-    reopsByServicioProceso: mergeBy(
-      reports.flatMap((r) => r.reopsByServicioProceso),
-      (row) => `${row.servicio}|${row.proceso}`,
-      ['total', 'pendientes'],
-    ),
+    reopsByServicioProceso,
     recupsByServicio: mergeBy(
       reports.flatMap((r) => r.recupsByServicio),
       (row) => row.servicio,
       ['total', 'manuales', 'normales'],
     ).sort((a, b) => b.total - a.total),
     estadoCajas: snapshots.flatMap((s) => s.report.estadoCajas.map((caja) => ({ ...caja, produccion: s.produccion }))),
-    topPlacas: snapshots
-      .flatMap((s) => s.report.topPlacas.map((placa) => ({ ...placa, produccion: s.produccion })))
-      .sort((a, b) => b.reoperaciones - a.reoperaciones)
-      .slice(0, TOP_PLACAS_LIMIT),
     evolucion: mergeBy(
       reports.flatMap((r) => r.evolucion),
       (row) => row.fecha,
       ['reoperaciones', 'recuperaciones'],
     ).sort((a, b) => a.fecha.localeCompare(b.fecha)),
-    recupsPorOperador: mergeBy(
-      reports.flatMap((r) => r.recupsPorOperador),
-      (row) => row.operador,
-      ['total', 'manuales'],
-    ).sort((a, b) => b.total - a.total),
-    incidenciasPorMotivo: mergeBy(
-      reports.flatMap((r) => r.incidenciasPorMotivo),
-      (row) => row.motivo,
-      ['total'],
-    ).sort((a, b) => b.total - a.total),
   };
 }

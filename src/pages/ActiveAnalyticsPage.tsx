@@ -11,7 +11,7 @@ import { HorizontalBars } from '@/components/reports/HorizontalBars';
 import { ReportSection } from '@/components/reports/ReportSection';
 import { useAuth } from '@/context/AuthContext';
 import { useActiveProductionsAnalytics } from '@/hooks/useActiveProductionsAnalytics';
-import type { ComparisonRow, EstadoCajaGlobal, TopPlacaGlobal } from '@/lib/activeAnalytics';
+import type { ComparisonRow, EstadoCajaGlobal, ProcesoDistribucionRow } from '@/lib/activeAnalytics';
 import { exportExcel, exportPdf, type ExportChart, type ExportColumn, type ExportMeta } from '@/lib/exportFiles';
 import { formatPercent } from '@/lib/percentFormat';
 import type { ReportData } from '@/services/metricsService';
@@ -20,8 +20,6 @@ type ServicioRow = ReportData['servicioGeneral'][number];
 type ReopProcesoRow = ReportData['reopsByServicioProceso'][number];
 type RecupServicioRow = ReportData['recupsByServicio'][number];
 type EvolucionRow = ReportData['evolucion'][number];
-type OperadorRow = ReportData['recupsPorOperador'][number];
-type MotivoRow = ReportData['incidenciasPorMotivo'][number];
 
 const CAJAS_PAGE_SIZE = 50;
 
@@ -33,6 +31,13 @@ const COMPARISON_COLUMNS: ExportColumn<ComparisonRow>[] = [
   { header: 'Pendientes', value: (r) => r.reoperacionesPendientes },
   { header: 'Recuperaciones', value: (r) => r.totalRecuperaciones },
   { header: 'Cajas pendientes', value: (r) => r.cajasPendientes },
+  { header: '% de reoperaciones', value: (r) => formatPercent(r.porcentajeReoperaciones) },
+];
+
+const PROCESO_COLUMNS: ExportColumn<ProcesoDistribucionRow>[] = [
+  { header: 'Proceso', value: (r) => r.proceso },
+  { header: 'Reoperaciones', value: (r) => r.total },
+  { header: '% de placas con reoperación', value: (r) => formatPercent(r.porcentaje) },
 ];
 
 const SERVICIO_COLUMNS: ExportColumn<ServicioRow>[] = [
@@ -71,31 +76,10 @@ const CAJA_COLUMNS: ExportColumn<EstadoCajaGlobal>[] = [
   { header: 'Estado', value: (r) => BOX_STATUS_LABELS[r.estado] },
 ];
 
-const TOP_PLACAS_COLUMNS: ExportColumn<TopPlacaGlobal>[] = [
-  { header: 'Producción', value: (r) => r.produccion },
-  { header: 'Serie', value: (r) => r.serie },
-  { header: 'Posición', value: (r) => r.posicion },
-  { header: 'Servicio', value: (r) => r.servicio },
-  { header: 'Caja', value: (r) => r.caja },
-  { header: 'Reoperaciones', value: (r) => r.reoperaciones },
-  { header: 'Pendientes', value: (r) => r.pendientes },
-];
-
 const EVOLUCION_COLUMNS: ExportColumn<EvolucionRow>[] = [
   { header: 'Fecha', value: (r) => r.fecha },
   { header: 'Reoperaciones', value: (r) => r.reoperaciones },
   { header: 'Recuperaciones', value: (r) => r.recuperaciones },
-];
-
-const OPERADOR_COLUMNS: ExportColumn<OperadorRow>[] = [
-  { header: 'Operador', value: (r) => r.operador },
-  { header: 'Recuperaciones', value: (r) => r.total },
-  { header: 'Manuales', value: (r) => r.manuales },
-];
-
-const MOTIVO_COLUMNS: ExportColumn<MotivoRow>[] = [
-  { header: 'Motivo', value: (r) => r.motivo },
-  { header: 'Total', value: (r) => r.total },
 ];
 
 const TABLE_EMPTY = { emptyTitle: 'Sin registros', emptyDescription: 'No hay datos suficientes para este reporte todavía.' };
@@ -108,14 +92,12 @@ export function ActiveAnalyticsPage() {
   const totals = data?.totals ?? null;
   const productionCount = data?.productionCount ?? 0;
   const comparison = data?.comparison ?? [];
+  const distribucionProcesos = data?.distribucionProcesos ?? [];
   const servicios = data?.servicioGeneral ?? [];
   const reopProceso = data?.reopsByServicioProceso ?? [];
   const recupServicio = data?.recupsByServicio ?? [];
   const cajas = data?.estadoCajas ?? [];
-  const top = data?.topPlacas ?? [];
   const evolucion = data?.evolucion ?? [];
-  const operadores = data?.recupsPorOperador ?? [];
-  const motivos = data?.incidenciasPorMotivo ?? [];
 
   const cajasTotalPages = Math.max(1, Math.ceil(cajas.length / CAJAS_PAGE_SIZE));
   const cajasCurrentPage = Math.min(cajasPage, cajasTotalPages);
@@ -144,7 +126,7 @@ export function ActiveAnalyticsPage() {
   ) => (
     <ExportMenu
       disabled={rows.length === 0}
-      onExcel={() => exportExcel(buildMeta(title, fileBase), columns, rows)}
+      onExcel={() => exportExcel(buildMeta(title, fileBase, charts), columns, rows)}
       onPdf={() => exportPdf(buildMeta(title, fileBase, charts), columns, rows)}
     />
   );
@@ -157,6 +139,12 @@ export function ActiveAnalyticsPage() {
     { header: 'Pendientes', cell: (r) => <span className="tabular-nums text-warning">{r.reoperacionesPendientes}</span> },
     { header: 'Recuperaciones', cell: (r) => <span className="tabular-nums text-success">{r.totalRecuperaciones}</span> },
     { header: 'Cajas pendientes', cell: (r) => <span className="tabular-nums">{r.cajasPendientes}</span> },
+    { header: '% reop.', cell: (r) => <span className="font-semibold tabular-nums">{formatPercent(r.porcentajeReoperaciones)}</span> },
+  ];
+  const procesoColumns: DataTableColumn<ProcesoDistribucionRow>[] = [
+    { header: 'Proceso', cell: (r) => <span className="font-semibold text-primary">{r.proceso}</span> },
+    { header: 'Reoperaciones', cell: (r) => <span className="tabular-nums">{r.total}</span> },
+    { header: '% de placas con reoperación', cell: (r) => <span className="font-semibold tabular-nums">{formatPercent(r.porcentaje)}</span> },
   ];
   const servicioColumns: DataTableColumn<ServicioRow>[] = [
     { header: 'Servicio', cell: (r) => r.servicio },
@@ -190,28 +178,10 @@ export function ActiveAnalyticsPage() {
     { header: 'Pendientes', cell: (r) => <span className="tabular-nums">{r.pendientes}</span> },
     { header: 'Estado', cell: (r) => <OperationStatusBadge status={r.estado} labels={BOX_STATUS_LABELS} /> },
   ];
-  const topColumns: DataTableColumn<TopPlacaGlobal>[] = [
-    { header: 'Producción', cell: (r) => r.produccion },
-    { header: 'Serie', cell: (r) => <span className="font-mono">{r.serie}</span> },
-    { header: 'Posición', cell: (r) => r.posicion },
-    { header: 'Servicio', cell: (r) => r.servicio },
-    { header: 'Caja', cell: (r) => <span className="font-mono">{r.caja}</span> },
-    { header: 'Reoperaciones', cell: (r) => <span className="tabular-nums">{r.reoperaciones}</span> },
-    { header: 'Pendientes', cell: (r) => <span className="tabular-nums">{r.pendientes}</span> },
-  ];
   const evolucionColumns: DataTableColumn<EvolucionRow>[] = [
     { header: 'Fecha', cell: (r) => r.fecha },
     { header: 'Reoperaciones', cell: (r) => <span className="tabular-nums">{r.reoperaciones}</span> },
     { header: 'Recuperaciones', cell: (r) => <span className="tabular-nums">{r.recuperaciones}</span> },
-  ];
-  const operadorColumns: DataTableColumn<OperadorRow>[] = [
-    { header: 'Operador', cell: (r) => r.operador },
-    { header: 'Recuperaciones', cell: (r) => <span className="tabular-nums">{r.total}</span> },
-    { header: 'Manuales', cell: (r) => <span className="tabular-nums">{r.manuales}</span> },
-  ];
-  const motivoColumns: DataTableColumn<MotivoRow>[] = [
-    { header: 'Motivo', cell: (r) => r.motivo },
-    { header: 'Total', cell: (r) => <span className="tabular-nums">{r.total}</span> },
   ];
 
   const comparisonCharts = [
@@ -219,6 +189,10 @@ export function ActiveAnalyticsPage() {
     { title: 'Recuperaciones', items: comparison.map((c) => ({ label: c.produccion, value: c.totalRecuperaciones })) },
     { title: 'Pendientes', items: comparison.map((c) => ({ label: c.produccion, value: c.reoperacionesPendientes })) },
   ];
+  const porcentajeProduccionItems = comparison.map((c) => ({ label: c.produccion, value: c.porcentajeReoperaciones }));
+  const porcentajeProduccionMax = Math.max(100, ...porcentajeProduccionItems.map((i) => i.value));
+  const procesoItems = distribucionProcesos.map((p) => ({ label: p.proceso, value: p.porcentaje }));
+  const procesoMax = Math.max(100, ...procesoItems.map((i) => i.value));
 
   const hasMovement = totals !== null && totals.totalReoperaciones + totals.totalRecuperaciones > 0;
 
@@ -271,7 +245,13 @@ export function ActiveAnalyticsPage() {
       <ReportSection
         title="Comparativa entre producciones"
         description="Cómo se diferencian las producciones activas en reoperaciones, recuperaciones y pendientes."
-        actions={exportMenu('Comparativa entre producciones', 'comparativa-producciones', COMPARISON_COLUMNS, comparison, comparisonCharts.map((c) => ({ title: c.title, items: c.items })))}
+        actions={exportMenu(
+          'Comparativa entre producciones',
+          'comparativa-producciones',
+          COMPARISON_COLUMNS,
+          comparison,
+          comparisonCharts.map((c) => ({ title: c.title, items: c.items })),
+        )}
       >
         <div className="mb-6 grid gap-4 md:grid-cols-3">
           {comparisonCharts.map((chart) => (
@@ -282,6 +262,44 @@ export function ActiveAnalyticsPage() {
           ))}
         </div>
         <DataTable columns={comparisonColumns} rows={comparison} getRowKey={(r) => r.produccion} {...TABLE_EMPTY} />
+      </ReportSection>
+
+      <ReportSection
+        title="Porcentaje de reoperaciones por producción"
+        description="Reoperaciones de cada producción frente a las placas con reoperación de todas las producciones activas, que equivalen al 100%."
+        actions={exportMenu(
+          'Porcentaje de reoperaciones por producción',
+          'porcentaje-reoperaciones-producciones',
+          COMPARISON_COLUMNS,
+          comparison,
+          [{ title: '% de reoperaciones por producción', items: porcentajeProduccionItems }],
+        )}
+      >
+        <div className="rounded-xl border border-border bg-muted/50 p-4 sm:p-5">
+          <HorizontalBars
+            items={porcentajeProduccionItems}
+            maxValue={porcentajeProduccionMax}
+            formatValue={formatPercent}
+            emptyText="Sin producciones activas para graficar."
+          />
+        </div>
+      </ReportSection>
+
+      <ReportSection
+        title="Distribución de reoperaciones por proceso"
+        description="Reoperaciones de cada proceso frente a las placas con reoperación de todas las producciones activas (100%). Una placa puede repetir proceso, por lo que los porcentajes pueden sumar más de 100%."
+        actions={exportMenu(
+          'Distribución de reoperaciones por proceso',
+          'distribucion-reoperaciones-proceso',
+          PROCESO_COLUMNS,
+          distribucionProcesos,
+          [{ title: '% de reoperaciones por proceso', items: procesoItems }],
+        )}
+      >
+        <div className="mb-6 rounded-xl border border-border bg-muted/50 p-4 sm:p-5">
+          <HorizontalBars items={procesoItems} maxValue={procesoMax} formatValue={formatPercent} emptyText="Sin reoperaciones por proceso." />
+        </div>
+        <DataTable columns={procesoColumns} rows={distribucionProcesos} getRowKey={(r) => r.proceso} {...TABLE_EMPTY} />
       </ReportSection>
 
       <ReportSection
@@ -345,54 +363,11 @@ export function ActiveAnalyticsPage() {
       </ReportSection>
 
       <ReportSection
-        title="Placas con más reoperaciones"
-        description="Las 10 placas con mayor cantidad de reoperaciones entre todas las producciones activas."
-        actions={exportMenu(
-          'Placas con más reoperaciones',
-          'placas-mas-reoperadas-activas',
-          TOP_PLACAS_COLUMNS,
-          top,
-          [{ title: 'Reoperaciones por placa', items: top.map((r) => ({ label: r.serie, value: r.reoperaciones })) }],
-        )}
-      >
-        <DataTable columns={topColumns} rows={top} getRowKey={(r) => `${r.produccion}-${r.serie}-${r.posicion}`} {...TABLE_EMPTY} />
-      </ReportSection>
-
-      <ReportSection
         title="Evolución por fecha"
         description="Reoperaciones y recuperaciones registradas cada día en todas las producciones activas."
         actions={exportMenu('Evolución por fecha', 'evolucion-fecha-activas', EVOLUCION_COLUMNS, evolucion)}
       >
         <DataTable columns={evolucionColumns} rows={evolucion} getRowKey={(r) => r.fecha} {...TABLE_EMPTY} />
-      </ReportSection>
-
-      <ReportSection
-        title="Recuperaciones por operador"
-        description="Recuperaciones registradas por cada operador, con sus manuales."
-        actions={exportMenu(
-          'Recuperaciones por operador',
-          'recuperaciones-operador-activas',
-          OPERADOR_COLUMNS,
-          operadores,
-          [{ title: 'Recuperaciones por operador', items: operadores.map((r) => ({ label: r.operador, value: r.total })) }],
-        )}
-      >
-        <DataTable columns={operadorColumns} rows={operadores} getRowKey={(r) => r.operador} {...TABLE_EMPTY} />
-      </ReportSection>
-
-      <ReportSection
-        title="Distribución de incidencias"
-        description="Recuperaciones agrupadas por motivo registrado."
-        actions={exportMenu(
-          'Distribución de incidencias',
-          'incidencias-motivo-activas',
-          MOTIVO_COLUMNS,
-          motivos,
-          [{ title: 'Incidencias por motivo', items: motivos.map((r) => ({ label: r.motivo, value: r.total })) }],
-        )}
-      >
-        <HorizontalBars items={motivos.map((r) => ({ label: r.motivo, value: r.total }))} />
-        <DataTable columns={motivoColumns} rows={motivos} getRowKey={(r) => r.motivo} {...TABLE_EMPTY} />
       </ReportSection>
     </div>
   );
