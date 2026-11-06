@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Boxes,
   Check,
+  ChevronRight,
   Layers,
   ListChecks,
   Loader2,
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import { BoxCardStep, ServiceCardStep } from '@/components/qr/BatchStepCards';
 import {
   REOPERATION_PROCESSES,
   placaLabel,
@@ -102,6 +104,8 @@ export function BatchReoperationPanel({
         if (persisted?.servicio && data.some((s) => s.servicio === persisted.servicio)) {
           setServicio(persisted.servicio);
           if (persisted.numeroCaja) setNumeroCaja(persisted.numeroCaja);
+        } else if (data.length === 1) {
+          setServicio(data[0].servicio);
         }
       })
       .catch(() => setError('No se pudieron cargar los servicios.'))
@@ -123,7 +127,7 @@ export function BatchReoperationPanel({
         setBoxes(data);
         setNumeroCaja((current) => {
           if (current && data.some((b) => b.numero_caja === current)) return current;
-          return '';
+          return data.length === 1 ? data[0].numero_caja : '';
         });
       })
       .catch(() => setError('No se pudieron cargar las cajas del servicio.'))
@@ -156,14 +160,6 @@ export function BatchReoperationPanel({
     savePersist({ servicio, numeroCaja });
   }, [open, produccionId, servicio, numeroCaja]);
 
-  const serviceOptions = useMemo(
-    () => services.map((s) => ({ value: s.servicio, label: `${s.servicio} (${s.placas} placas)` })),
-    [services],
-  );
-  const boxOptions = useMemo(
-    () => boxes.map((b) => ({ value: b.numero_caja, label: `Caja ${b.numero_caja} (${b.placas} placas)` })),
-    [boxes],
-  );
   const placaOptions = useMemo(
     () => placas.map((p) => ({ value: p.id, label: placaLabel(p) })),
     [placas],
@@ -184,6 +180,7 @@ export function BatchReoperationPanel({
   }, [selectionMode, placas, selectedIds, rangeStart, rangeEnd]);
 
   const selectedCount = selectedPlacas.length;
+  const step = !servicio ? 1 : !numeroCaja ? 2 : 3;
 
   const toggleManual = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -268,23 +265,46 @@ export function BatchReoperationPanel({
             </div>
           )}
 
-          {/* Step 1: Servicio */}
-          <div className="space-y-2">
-            <StepLabel num={1} icon={<Layers className="h-4 w-4" />} text="Servicio" />
-            {servicesLoading ? (
-              <LoadingPill text="Cargando servicios..." />
-            ) : (
-              <SearchableSelect
-                label="Selecciona un servicio"
-                value={servicio}
-                options={serviceOptions}
-                onChange={(v) => {
-                  setServicio(v);
-                  setNumeroCaja('');
-                }}
-              />
-            )}
-          </div>
+          {servicio && (
+            <nav className="flex flex-wrap items-center gap-1.5 text-sm">
+              <button
+                type="button"
+                onClick={() => { setServicio(''); setNumeroCaja(''); }}
+                className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary transition hover:bg-primary/20"
+              >
+                {servicio}
+              </button>
+              {numeroCaja && (
+                <>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <button
+                    type="button"
+                    onClick={() => setNumeroCaja('')}
+                    className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary transition hover:bg-primary/20"
+                  >
+                    Caja {numeroCaja}
+                  </button>
+                </>
+              )}
+            </nav>
+          )}
+
+          {step === 1 && (
+            <div className="space-y-2">
+              <StepLabel num={1} icon={<Layers className="h-4 w-4" />} text="Servicio" />
+              {servicesLoading ? (
+                <LoadingPill text="Cargando servicios..." />
+              ) : (
+                <ServiceCardStep
+                  services={services}
+                  onSelect={(v) => {
+                    setServicio(v);
+                    setNumeroCaja('');
+                  }}
+                />
+              )}
+            </div>
+          )}
 
           {/* Parcialidad info */}
           {servicio && parcialidadInfo && (
@@ -313,26 +333,19 @@ export function BatchReoperationPanel({
           )}
 
           {/* Step 2: Caja */}
-          {servicio && (
+          {step === 2 && (
             <div className="space-y-2">
               <StepLabel num={2} icon={<Boxes className="h-4 w-4" />} text="Caja" />
               {boxesLoading ? (
                 <LoadingPill text="Cargando cajas..." />
-              ) : boxOptions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hay cajas en este servicio.</p>
               ) : (
-                <SearchableSelect
-                  label="Selecciona una caja"
-                  value={numeroCaja}
-                  options={boxOptions}
-                  onChange={setNumeroCaja}
-                />
+                <BoxCardStep boxes={boxes} onSelect={setNumeroCaja} />
               )}
             </div>
           )}
 
           {/* Step 3: Selección de placas */}
-          {numeroCaja && (
+          {step === 3 && (
             <div className="space-y-3">
               <StepLabel num={3} icon={<ListChecks className="h-4 w-4" />} text="Selecciona placas" />
               {placasLoading ? (
