@@ -38,6 +38,10 @@ export interface ActiveAnalytics {
   evolucion: ReportData['evolucion'];
 }
 
+function compareText(a: string, b: string): number {
+  return a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' });
+}
+
 function sumOf<T>(items: T[], pick: (item: T) => number): number {
   return items.reduce((acc, item) => acc + pick(item), 0);
 }
@@ -94,7 +98,7 @@ function mergeServicios(snapshots: ProductionSnapshot[]): ReportData['servicioGe
   const totalReoperaciones = sumOf(merged, (row) => row.reoperaciones);
   return merged
     .map((row) => ({ ...row, porcentajeTotal: percent(row.reoperaciones, totalReoperaciones) }))
-    .sort((a, b) => a.servicio.localeCompare(b.servicio));
+    .sort((a, b) => compareText(a.servicio, b.servicio));
 }
 
 function buildDistribucionProcesos(
@@ -107,7 +111,7 @@ function buildDistribucionProcesos(
   }
   return [...porProceso.entries()]
     .map(([proceso, total]) => ({ proceso, total, porcentaje: percent(total, placasAfectadas) }))
-    .sort((a, b) => b.total - a.total);
+    .sort((a, b) => compareText(a.proceso, b.proceso));
 }
 
 export function aggregateActiveProductions(snapshots: ProductionSnapshot[]): ActiveAnalytics {
@@ -121,7 +125,8 @@ export function aggregateActiveProductions(snapshots: ProductionSnapshot[]): Act
   return {
     productionCount: snapshots.length,
     totals,
-    comparison: snapshots.map((s) => ({
+    comparison: snapshots
+      .map((s) => ({
       produccion: s.produccion,
       totalPlacas: s.metrics.totalPlacas,
       placasAfectadas: s.metrics.placasAfectadas,
@@ -130,16 +135,24 @@ export function aggregateActiveProductions(snapshots: ProductionSnapshot[]): Act
       totalRecuperaciones: s.metrics.totalRecuperaciones,
       cajasPendientes: s.metrics.cajasPendientes,
       porcentajeReoperaciones: percent(s.metrics.totalReoperaciones, totals.placasAfectadas),
-    })),
+      }))
+      .sort((a, b) => compareText(a.produccion, b.produccion)),
     distribucionProcesos: buildDistribucionProcesos(reopsByServicioProceso, totals.placasAfectadas),
     servicioGeneral: mergeServicios(snapshots),
-    reopsByServicioProceso,
+    reopsByServicioProceso: [...reopsByServicioProceso].sort(
+      (a, b) => compareText(a.servicio, b.servicio) || compareText(a.proceso, b.proceso),
+    ),
     recupsByServicio: mergeBy(
       reports.flatMap((r) => r.recupsByServicio),
       (row) => row.servicio,
       ['total', 'manuales', 'normales'],
-    ).sort((a, b) => b.total - a.total),
-    estadoCajas: snapshots.flatMap((s) => s.report.estadoCajas.map((caja) => ({ ...caja, produccion: s.produccion }))),
+    ).sort((a, b) => compareText(a.servicio, b.servicio)),
+    estadoCajas: snapshots
+      .flatMap((s) => s.report.estadoCajas.map((caja) => ({ ...caja, produccion: s.produccion })))
+      .sort(
+        (a, b) =>
+          compareText(a.produccion, b.produccion) || compareText(a.servicio, b.servicio) || compareText(a.caja, b.caja),
+      ),
     evolucion: mergeBy(
       reports.flatMap((r) => r.evolucion),
       (row) => row.fecha,
