@@ -112,14 +112,66 @@ export async function previewServiceBoxPlan(input: ServiceBoxPlanInput): Promise
   }));
 }
 
-export async function replaceServiceBoxPlan(input: ServiceBoxPlanInput): Promise<ServiceBoxPlanSaved> {
-  const { data, error } = await supabase.rpc('replace_service_boxes_plan', planParams(input));
-  if (error) throw new Error(error.message || 'No se pudo guardar la asignación de cajas.');
+const CLEAR_CONSECUTIVO_RANGE = 5000;
+const INSERT_BOX_BATCH = 100;
 
-  const row = firstRow(data);
-  return {
-    cajas: toNumber(row.cajas_creadas),
-    series: toNumber(row.series_asignadas),
-    placas: toNumber(row.placas_asignadas),
-  };
+export interface ServiceBoxReplaceProgress {
+  processedBoxes: number;
+  totalBoxes: number;
+}
+
+export async function replaceServiceBoxPlan(
+  input: ServiceBoxPlanInput,
+  plan: ServiceBoxPlanRow[],
+  consecutivos: { minimo: number; maximo: number },
+  onProgress?: (progress: ServiceBoxReplaceProgress) => void,
+): Promise<ServiceBoxPlanSaved> {
+  const { produccionId, servicio, tipo } = input;
+
+  const { error: beginError } = await supabase.rpc('begin_service_box_replace', {
+    p_produccion_id: produccionId,
+    p_servicio: servicio,
+  });
+  if (beginError) throw new Error(beginError.message || 'No se pudieron eliminar las cajas anteriores del servicio.');
+
+  for (let desde = consecutivos.minimo; desde <= consecutivos.maximo; desde += CLEAR_CONSECUTIVO_RANGE) {
+    const hasta = Math.min(desde + CLEAR_CONSECUTIVO_RANGE - 1, consecutivos.maximo);
+    const { error: clearError } = await supabase.rpc('clear_service_box_numbers_range', {
+      p_produccion_id: produccionId,
+      p_servicio: servicio,
+      p_consecutivo_desde: desde,
+      p_consecutivo_hasta: hasta,
+    });
+    if (clearError) throw new Error(clearError.message || 'No se pudieron limpiar los números de caja de las placas.');
+  }
+
+  let cajas = 0;
+  let series = 0;
+  let placas = 0;
+  for (let inicio = 0; inicio < plan.length; inicio += INSERT_BOX_BATCH) {
+    const lote = plan.slice(inicio, inicio + INSERT_BOX_BATCH);
+    const { data, error } = await supabase.rpc('insert_service_boxes_batch', {
+      p_produccion_id: produccionId,
+      p_servicio: servicio,
+      p_tipo_servicio: tipo,
+      p_boxes: lote.map((row) => ({
+        numero_caja: row.numeroCaja,
+        consecutivo_inicial: row.consecutivoInicial,
+        consecutivo_final: row.consecutivoFinal,
+        serie_inicial: row.serieInicial,
+        serie_final: row.serieFinal,
+        cantidad_series: row.cantidadSeries,
+        cantidad_placas: row.cantidadPlacas,
+      })),
+    });
+    if (error) throw new Error(error.message || 'No se pudo guardar un lote de cajas.');
+
+    const row = firstRow(data);
+    cajas += toNumber(row.cajas_creadas);
+    series += toNumber(row.series_asignadas);
+    placas += toNumber(row.placas_asignadas);
+    onProgress?.({ processedBoxes: Math.min(inicio + INSERT_BOX_BATCH, plan.length), totalBoxes: plan.length });
+  }
+
+  return { cajas, series, placas };
 }

@@ -8,6 +8,7 @@ import {
   type ServiceBoxBounds,
   type ServiceBoxPlanInput,
   type ServiceBoxPlanRow,
+  type ServiceBoxReplaceProgress,
 } from '@/services/serviceBoxPlanService';
 import type { ServiceType } from '@/types/domain';
 
@@ -38,6 +39,7 @@ export function ServiceBoxRangeAssigner({ productionId, servicio, tipo, onAssign
   const [verifying, setVerifying] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState<ServiceBoxReplaceProgress | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -101,20 +103,27 @@ export function ServiceBoxRangeAssigner({ productionId, servicio, tipo, onAssign
   };
 
   const handleConfirm = async () => {
-    if (!planInput) return;
+    if (!planInput || !plan || !bounds || bounds.consecutivoMinimo === null || bounds.consecutivoMaximo === null) return;
     setSaving(true);
+    setProgress(null);
     setFormError(null);
     try {
-      const result = await replaceServiceBoxPlan(planInput);
+      const result = await replaceServiceBoxPlan(
+        planInput,
+        plan,
+        { minimo: bounds.consecutivoMinimo, maximo: bounds.consecutivoMaximo },
+        setProgress,
+      );
       setMessage(`${result.cajas} cajas asignadas: ${result.series} ${unidad} y ${result.placas} placas físicas.`);
       setPlan(null);
       setPlanInput(null);
       onAssigned();
     } catch (cause) {
-      setFormError(errorMessage(cause, 'No se pudo guardar la asignación de cajas.'));
+      setFormError(errorMessage(cause, 'No se pudo guardar la asignación de cajas. Vuelve a confirmar para completar el reemplazo.'));
     } finally {
       setConfirming(false);
       setSaving(false);
+      setProgress(null);
     }
   };
 
@@ -231,6 +240,19 @@ export function ServiceBoxRangeAssigner({ productionId, servicio, tipo, onAssign
           </span>
         </label>
       </div>
+
+      {saving && progress && (
+        <p className="flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Guardando cajas: {progress.processedBoxes.toLocaleString('es-MX')} de {progress.totalBoxes.toLocaleString('es-MX')}
+        </p>
+      )}
+      {saving && !progress && (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Liberando placas del servicio...
+        </p>
+      )}
 
       {formError && (
         <p role="alert" className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
