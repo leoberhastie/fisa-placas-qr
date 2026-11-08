@@ -24,6 +24,7 @@ import { parseQrContent } from '@/services/qrService';
 import { loadQrReaderConfig, playBeep, vibrate, type QrReaderConfig } from '@/lib/qrConfig';
 import {
   findPlaca,
+  isBoxClosed,
   listReoperacionesByPlaca,
   listRecuperacionesByProduction,
   createReoperation,
@@ -100,11 +101,13 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
           const allRecups = await listRecuperacionesByProduction(selectedProductionId);
           const placaRecups = allRecups.filter((r) => r.placa_id === placa.id).length;
           const hasPending = placaReops.some((r) => r.estado === 'pendiente');
+          const boxClosed = await isBoxClosed(selectedProductionId, placa.servicio, placa.numero_caja);
           setModalInfo({
             placa,
             reopsCount: placaReops.length,
             recuperacionesCount: placaRecups,
             hasPendingReoperation: hasPending,
+            boxClosed,
             parsed,
             notFound: false,
           });
@@ -144,6 +147,10 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
       if (submittingRef.current) return;
       submittingRef.current = true;
       try {
+        if (placaId && modalInfo?.placa) {
+          const closed = await isBoxClosed(selectedProductionId, modalInfo.placa.servicio, modalInfo.placa.numero_caja);
+          if (closed) throw new Error('La caja de esta placa está cerrada. No se puede guardar la reoperación.');
+        }
         await createReoperation({
           produccion_id: selectedProductionId,
           placa_id: placaId,
@@ -170,7 +177,7 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
         submittingRef.current = false;
       }
     },
-    [selectedProductionId, displayName, userEmail, reload, closeModal],
+    [selectedProductionId, displayName, userEmail, reload, closeModal, modalInfo],
   );
 
   const handleRegisterRecuperacion = useCallback(
@@ -252,12 +259,14 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
         const allRecups = await listRecuperacionesByProduction(selectedProductionId);
         const placaRecups = allRecups.filter((r) => r.placa_id === placa.id).length;
         const hasPending = placaReops.some((r) => r.estado === 'pendiente');
+        const boxClosed = await isBoxClosed(selectedProductionId, placa.servicio, placa.numero_caja);
         setLastSerie(placa.serie);
         setModalInfo({
           placa,
           reopsCount: placaReops.length,
           recuperacionesCount: placaRecups,
           hasPendingReoperation: hasPending,
+          boxClosed,
           parsed: { serie: placa.serie, posicion: placa.posicion, posicionNormalizada: placa.posicion as PlatePosition, complementaria: '', raw: '' },
           notFound: false,
         });

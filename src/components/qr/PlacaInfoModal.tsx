@@ -9,6 +9,7 @@ export interface PlacaInfo {
   reopsCount: number;
   recuperacionesCount: number;
   hasPendingReoperation: boolean;
+  boxClosed?: boolean;
   parsed: ParsedQrData;
   notFound: boolean;
 }
@@ -112,7 +113,8 @@ export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegiste
               <button
                 type="button"
                 onClick={() => setMode('reoperacion')}
-                disabled={info.notFound}
+                disabled={info.notFound || info.boxClosed}
+                title={info.boxClosed ? 'La caja está cerrada' : undefined}
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-warning px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-warning disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <RotateCcw className="h-4 w-4" />
@@ -141,6 +143,12 @@ export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegiste
             </div>
             {info.recuperacionesCount > 0 && (
               <p className="text-xs text-muted-foreground">Esta placa ya fue recuperada, por eso sus reoperaciones no se pueden quitar.</p>
+            )}
+            {info.boxClosed && (
+              <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                <p>La caja de esta placa está cerrada. No se pueden registrar reoperaciones en ella.</p>
+              </div>
             )}
           </>
         )}
@@ -177,8 +185,15 @@ export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegiste
                 placeholder="Notas sobre la reoperación"
               />
             </div>
+            {info.boxClosed && (
+              <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>La caja de esta placa está cerrada. No se puede guardar la reoperación.</span>
+              </div>
+            )}
             <FormActions
               submitting={submitting}
+              blocked={info.boxClosed}
               onBack={() => setMode('info')}
               confirmLabel="Confirmar reoperación"
               tone="warning"
@@ -258,12 +273,14 @@ export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegiste
 
 function FormActions({
   submitting,
+  blocked = false,
   onBack,
   confirmLabel,
   tone,
   icon: Icon,
 }: {
   submitting: boolean;
+  blocked?: boolean;
   onBack: () => void;
   confirmLabel: string;
   tone: 'warning' | 'success' | 'destructive';
@@ -286,7 +303,7 @@ function FormActions({
       </button>
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || blocked}
         className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-primary-foreground transition disabled:opacity-70 ${toneClass}`}
       >
         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}

@@ -85,6 +85,18 @@ export async function findPlaca(
   return (data as Placa) ?? null;
 }
 
+export async function isBoxClosed(produccionId: string, servicio: string, numeroCaja: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('box_completion')
+    .select('completada_manual')
+    .eq('produccion_id', produccionId)
+    .eq('servicio', servicio)
+    .eq('numero_caja', numeroCaja)
+    .maybeSingle();
+  if (error) throw new Error('No se pudo verificar el estado de la caja.');
+  return data?.completada_manual === true;
+}
+
 export interface ServiceBox {
   numero_caja: string;
   placas: number;
