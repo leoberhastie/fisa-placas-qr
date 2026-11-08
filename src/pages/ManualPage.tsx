@@ -55,6 +55,7 @@ const ROLES = [
       'Escanear el código QR de una placa para ver su información.',
       'Registrar reoperaciones y recuperaciones asociadas a la placa escaneada.',
       'Cerrar manualmente una reoperación pendiente cuando corresponde.',
+      'Cerrar y reabrir cajas desde el panel de cierre del lector QR.',
       'Consultar reoperaciones generales, cajas e historial de la producción activa.',
     ],
   },
@@ -207,6 +208,48 @@ const SECTIONS: SectionDef[] = [
           <strong className="text-foreground">cerrarla manualmente</strong> desde el mismo lector cuando
           la recuperación no se asocia automáticamente a un escaneo.
         </p>
+        <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          <p className="font-semibold">Cajas cerradas y reoperaciones</p>
+          <p className="mt-1">
+            Si escanea una placa cuya caja ya está cerrada, el lector muestra una advertencia y{' '}
+            <strong>no permite registrar reoperaciones</strong> sobre esa placa. Esto evita registrar
+            movimientos en cajas que ya se dieron por completadas. La verificación se realiza tanto al
+            escanear como al buscar manualmente, y se vuelve a comprobar justo antes de guardar.
+          </p>
+        </div>
+        <div className="rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm">
+          <p className="font-semibold text-success">Cerrar cajas desde el lector</p>
+          <p className="mt-1 text-muted-foreground">
+            Junto a los botones de modo (Auto/Manual) y de reoperación por lote, encontrar el botón{' '}
+            <strong className="text-foreground">Cerrar cajas</strong>. Al pulsarlo se abre un panel a
+            pantalla completa, diseñado para teléfono y tablet, que le permite:
+          </p>
+          <ul className="ml-4 mt-2 list-disc space-y-1 text-muted-foreground">
+            <li>Seleccionar un servicio de la lista de tarjetas.</li>
+            <li>Ver todas las cajas del servicio en una cuadrícula de tarjetas compactas, con su número, piezas, reoperaciones y pendientes.</li>
+            <li>Cerrar una caja con un solo toque (botón verde <strong className="text-foreground">Cerrar</strong>), siempre que no tenga reoperaciones pendientes.</li>
+            <li>Reabrir una caja cerrada con el botón <strong className="text-foreground">Reabrir</strong>.</li>
+            <li>Las cajas con reoperaciones pendientes aparecen bloqueadas (en rojo) y no se pueden cerrar hasta resolverlas.</li>
+            <li>Un resumen en la parte superior muestra cuántas cajas hay cerradas, bloqueadas y listas para cerrar.</li>
+          </ul>
+          <p className="mt-2 text-muted-foreground">
+            Esta función usa la misma lógica de cierre que la sección de Cajas, por lo que el resultado es idéntico: ambas pantallas reflejan los cambios al instante.
+          </p>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          <p className="font-semibold text-foreground">Quitar reoperaciones</p>
+          <p className="mt-1">
+            Si una reoperación se registró por error, puede <strong className="text-foreground">quitarla</strong>{' '}
+            desde el lector. Al escanear una placa que tiene reoperaciones, aparece la opcin de anular esas
+            reoperaciones. Debe seleccionar un motivo (anotación errónea, proceso incorrecto, duplicado u otro).
+            La anulación elimina la reoperación y queda registrada en el historial como{' '}
+            <strong className="text-foreground">anulación de reoperación</strong>.
+          </p>
+          <p className="mt-1">
+            Si la placa ya fue recuperada, sus reoperaciones no se pueden quitar, ya que el sistema
+            impide anular reoperaciones que ya fueron resueltas.
+          </p>
+        </div>
       </div>
     ),
   },
@@ -259,6 +302,16 @@ const SECTIONS: SectionDef[] = [
           marcarla como completada y reabrirla si es necesario. La paginación se realiza desde el servidor,
           lo que permite manejar miles de cajas sin lentitud. Toda la información visible se puede exportar.
         </p>
+        <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-muted-foreground">
+          <p className="font-semibold text-foreground">Cerrar cajas desde el lector QR</p>
+          <p className="mt-1">
+            Además de esta pantalla, existe un panel de cierre rápido dentro del lector QR (botón{' '}
+            <strong className="text-foreground">Cerrar cajas</strong>). Ese panel est optimizado para
+            teléfono y tablet: muestra las cajas en tarjetas grandes con su estado y permite cerrar o
+            reabrir con un solo toque. Ambas vías usan la misma lógica de cierre, por lo que lo que haga
+            en una se refleja inmediatamente en la otra.
+          </p>
+        </div>
       </div>
     ),
   },
@@ -406,7 +459,9 @@ const SECTIONS: SectionDef[] = [
           <li>Cada placa con incidencia genera una <strong className="text-foreground">reoperación</strong> en estado pendiente.</li>
           <li>Cuando la incidencia se resuelve, se registra una <strong className="text-foreground">recuperación</strong>, que cierra la reoperación correspondiente.</li>
           <li>El historial registra cada movimiento con fecha, usuario y detalle.</li>
-          <li>Las cajas se siguen a nivel de grupo: una caja se marca completa cuando todas sus reoperaciones están resueltas.</li>
+          <li>Las cajas se siguen a nivel de grupo: una caja se marca completa cuando todas sus reoperaciones están resueltas. Una caja con reoperaciones pendientes no se puede cerrar; el sistema lo bloquea tanto en la pantalla de Cajas como en el panel de cierre del lector QR.</li>
+          <li>Una vez cerrada una caja, no se pueden registrar nuevías reoperaciones sobre sus placas. El lector QR muestra una advertencia al escanear una placa de una caja cerrada y bloquea el registro.</li>
+          <li>Si una reoperación se registró por error, se puede anular (quitar) seleccionando un motivo. La anulación queda registrada en el historial.</li>
           <li>Los reportes agrupan toda la información para análisis y exportación.</li>
         </ol>
         <p>
