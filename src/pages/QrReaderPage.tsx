@@ -6,6 +6,7 @@ import {
   Keyboard,
   Layers,
   Loader2,
+  PackageCheck,
   QrCode,
   RefreshCw,
   ScanLine,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { PlacaInfoModal, type PlacaInfo } from '@/components/qr/PlacaInfoModal';
 import { BatchReoperationPanel } from '@/components/qr/BatchReoperationPanel';
+import { BoxClosePanel } from '@/components/qr/BoxClosePanel';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useAuth } from '@/context/AuthContext';
 import { useProductionSelection } from '@/context/ProductionSelectionContext';
@@ -49,6 +51,7 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
   const [modalLock, setModalLock] = useState(false);
   const [lastSerie, setLastSerie] = useState<string | null>(null);
   const [batchOpen, setBatchOpen] = useState(false);
+  const [closeBoxOpen, setCloseBoxOpen] = useState(false);
 
   // Manual mode form
   const [manualSerie, setManualSerie] = useState('');
@@ -129,7 +132,7 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
   const { containerId, state, error, restart } = useQrScanner({
     onScan: handleScan,
     enabled: mode === 'auto',
-    locked: modalLock || batchOpen,
+    locked: modalLock || batchOpen || closeBoxOpen,
     cameraFacing: qrConfig.cameraFacing,
   });
 
@@ -340,19 +343,19 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
                 Iniciando cámara...
               </div>
             )}
-            {state === 'scanning' && !modalLock && !batchOpen && (
+            {state === 'scanning' && !modalLock && !batchOpen && !closeBoxOpen && (
               <div className="flex items-center gap-2 text-sm text-success">
                 <Camera className="h-4 w-4" />
                 Escaneando...
               </div>
             )}
-            {(modalLock || batchOpen) && (
+            {(modalLock || batchOpen || closeBoxOpen) && (
               <div className="flex items-center gap-2 text-sm text-accent">
                 <ScanLine className="h-4 w-4" />
                 Cámara en pausa
               </div>
             )}
-            {state === 'stopped' && !modalLock && !batchOpen && (
+            {state === 'stopped' && !modalLock && !batchOpen && !closeBoxOpen && (
               <p className="text-sm text-muted-foreground">Cámara detenida.</p>
             )}
 
@@ -455,6 +458,14 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
           <Layers className="h-4 w-4" />
           Reoperación por lote
         </button>
+        <button
+          type="button"
+          onClick={() => setCloseBoxOpen(true)}
+          className="flex items-center justify-center gap-2 rounded-xl border border-success/30 bg-success/10 px-5 py-2.5 text-sm font-semibold text-success shadow-sm transition hover:bg-success/20"
+        >
+          <PackageCheck className="h-4 w-4" />
+          Cerrar cajas
+        </button>
       </div>
 
       {/* Last scan info - single card */}
@@ -488,6 +499,13 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
           setBatchOpen(false);
           void reload();
         }}
+      />
+
+      <BoxClosePanel
+        produccionId={selectedProductionId}
+        open={closeBoxOpen}
+        onClose={() => setCloseBoxOpen(false)}
+        onCompleted={() => void reload()}
       />
     </div>
   );
