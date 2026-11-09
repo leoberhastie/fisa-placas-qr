@@ -175,7 +175,6 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
   const paginatedRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPlacasReoperadas = new Set(allRows.filter((r) => r.placaId).map((r) => r.placaId)).size;
   const totalPendientes = allRows.filter((r) => r.estado === 'pendiente').length;
-  const totalRecuperaciones = recuperaciones.length;
   const totalPlacasRecuperadas = new Set(recuperaciones.filter((r) => r.placa_id).map((r) => r.placa_id)).size;
 
   const canOperate = profile ? canRegisterOperations(profile.role) : false;
@@ -269,11 +268,10 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
       <SelectedProductionBanner onNavigate={onNavigate} />
 
       <PageLoader loading={loading} error={error} onRetry={() => void reload()} hasData={reoperaciones.length > 0}>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <KpiCard icon={RotateCcw} label="Total reoperaciones" value={totalReoperaciones} tone="amber" />
           <KpiCard icon={Package} label="Placas reoperadas" value={totalPlacasReoperadas} tone="navy" />
           <KpiCard icon={AlertCircle} label="Pendientes" value={totalPendientes} tone="red" />
-          <KpiCard icon={ShieldCheck} label="Recuperaciones" value={totalRecuperaciones} tone="emerald" />
           <KpiCard icon={CheckCircle2} label="Placas recuperadas" value={totalPlacasRecuperadas} tone="emerald" />
         </div>
 
