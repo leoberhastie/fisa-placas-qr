@@ -244,8 +244,8 @@ function ServiceAccordionItem({ service, produccionId, isOpen, onToggle, onOpenP
           <MetricStat label="Placas físicas" value={service.placas} />
           <MetricStat label="Cajas" value={service.cajas} />
           <MetricStat label="Reoperaciones" value={service.reoperaciones} />
-          <MetricStat label="Recuperaciones" value={service.recuperaciones} />
-          <MetricStat label="Pendientes" value={service.pendientes} />
+          <MetricStat label="Registros de recuperación" value={service.recuperaciones} />
+          <MetricStat label="Registros pendientes" value={service.pendientes} />
         </div>
         <ChevronDown
           className={`hidden h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300 sm:block ${isOpen ? 'rotate-180' : ''}`}

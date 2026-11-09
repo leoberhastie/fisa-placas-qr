@@ -229,12 +229,12 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 2xl:grid-cols-6">
-        <KpiCard icon={RotateCcw} label="Reoperaciones" value={metrics.totalReoperaciones} tone="amber" />
-        <KpiCard icon={AlertCircle} label="Pendientes" value={metrics.reoperacionesPendientes} tone="red" />
-        <KpiCard icon={CheckCircle2} label="Recuperaciones" value={metrics.totalRecuperaciones} tone="emerald" />
-        <KpiCard icon={Users} label="Placas afectadas" value={metrics.placasAfectadas} tone="navy" />
-        <KpiCard icon={Package} label="Cajas pendientes" value={metrics.cajasPendientes} tone="red" />
-        <KpiCard icon={Wrench} label="Servicios completos" value={metrics.serviciosCompletos} tone="emerald" />
+        <KpiCard icon={RotateCcw} label="Registros de reoperación" value={metrics.totalReoperaciones} tone="amber" hint="Cada vez que una placa fue enviada a reoperar." />
+        <KpiCard icon={AlertCircle} label="Placas pendientes" value={metrics.placasConPendientes} tone="red" hint="Placas con una reoperación sin resolver. Cada placa cuenta una vez." />
+        <KpiCard icon={CheckCircle2} label="Recuperaciones" value={metrics.totalRecuperaciones} tone="emerald" hint="Recuperaciones registradas." />
+        <KpiCard icon={Users} label="Placas afectadas" value={metrics.placasAfectadas} tone="navy" hint="Placas distintas con al menos una reoperación, incluidas las recuperadas." />
+        <KpiCard icon={Package} label="Cajas pendientes" value={metrics.cajasPendientes} tone="red" hint="Cajas con alguna reoperación sin resolver." />
+        <KpiCard icon={Wrench} label="Servicios completos" value={metrics.serviciosCompletos} tone="emerald" hint="Servicios sin reoperaciones pendientes ni cajas en proceso." />
       </div>
 
       <ReportSection

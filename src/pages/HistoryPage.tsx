@@ -252,11 +252,11 @@ export function HistoryPage({ onNavigate }: ScreenProps) {
 
       <PageLoader loading={loading} error={error} onRetry={() => void reload()} hasData={allRows.length > 0}>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <KpiCard icon={RotateCcw} label="Reoperaciones" value={kpis.reop} tone="amber" />
-          <KpiCard icon={ShieldCheck} label="Recuperaciones" value={kpis.recuperaciones} tone="emerald" />
-          <KpiCard icon={ShieldCheck} label="Manuales" value={kpis.manuales} tone="navy" />
-          <KpiCard icon={ShieldCheck} label="Normales" value={kpis.normales} tone="slate" />
-          <KpiCard icon={Users} label="Placas afectadas" value={kpis.placasAfectadas} tone="navy" />
+          <KpiCard icon={RotateCcw} label="Movimientos de reoperación" value={kpis.reop} tone="amber" hint="Eventos de reoperación registrados en el historial, con los filtros aplicados." />
+          <KpiCard icon={ShieldCheck} label="Recuperaciones" value={kpis.recuperaciones} tone="emerald" hint="Eventos de recuperación en el historial, con los filtros aplicados." />
+          <KpiCard icon={ShieldCheck} label="Manuales" value={kpis.manuales} tone="navy" hint="Recuperaciones cerradas manualmente desde el lector." />
+          <KpiCard icon={ShieldCheck} label="Normales" value={kpis.normales} tone="slate" hint="Recuperaciones registradas por el flujo normal." />
+          <KpiCard icon={Users} label="Placas afectadas" value={kpis.placasAfectadas} tone="navy" hint="Placas distintas que aparecen en los movimientos filtrados." />
         </div>
 
       <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:grid-cols-2 xl:grid-cols-4">

@@ -427,6 +427,31 @@ const SECTIONS: SectionDef[] = [
     ),
   },
   {
+    id: 'analisis-global',
+    title: 'Análisis global',
+    icon: FileBarChart,
+    body: (
+      <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
+        <p>
+          La pantalla de Análisis global combina las producciones activas. Las producciones archivadas no se
+          incluyen. Muestra indicadores generales y varias secciones con comparativas y gráficas.
+        </p>
+        <p>Los indicadores principales son:</p>
+        <ul className="ml-4 list-disc space-y-1">
+          <li><strong className="text-foreground">Registros de reoperación:</strong> cada vez que una placa fue enviada a reoperar, sumado entre producciones.</li>
+          <li><strong className="text-foreground">Placas pendientes:</strong> placas con una reoperación sin resolver. Cada placa cuenta una vez.</li>
+          <li><strong className="text-foreground">Recuperaciones:</strong> recuperaciones registradas en todas las producciones activas.</li>
+          <li><strong className="text-foreground">Placas reoperadas:</strong> placas distintas con al menos una reoperación, incluidas las recuperadas.</li>
+          <li><strong className="text-foreground">Placas reoperadas del total:</strong> placas reoperadas dividido entre el total de placas de las producciones activas. Se muestra como porcentaje junto con el número de placas.</li>
+          <li><strong className="text-foreground">Cajas pendientes:</strong> cajas con alguna reoperación sin resolver.</li>
+        </ul>
+        <p>
+          Las secciones de comparativa, proceso, servicio y evolución tienen botones para exportar a Excel y PDF.
+        </p>
+      </div>
+    ),
+  },
+  {
     id: 'importaciones',
     title: 'Importaciones Excel',
     icon: Wrench,

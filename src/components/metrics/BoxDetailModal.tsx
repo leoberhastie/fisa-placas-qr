@@ -61,8 +61,8 @@ export function BoxDetailModal({ box, productionId, soloPendientes, exportMeta, 
           <MetricStat label="Serie inicial" value={box.serieInicial ?? '—'} nowrap />
           <MetricStat label="Serie final" value={box.serieFinal ?? '—'} nowrap />
           <MetricStat label="Reoperaciones" value={box.reoperaciones} />
-          <MetricStat label="Recuperaciones" value={box.recuperaciones} />
-          <MetricStat label="Pendientes" value={box.pendientes} />
+          <MetricStat label="Registros de recuperación" value={box.recuperaciones} />
+          <MetricStat label="Registros pendientes" value={box.pendientes} />
         </dl>
         {loading && <p className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" />Cargando movimientos de la caja...</p>}
         {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
