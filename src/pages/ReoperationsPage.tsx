@@ -174,7 +174,7 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const paginatedRows = filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalPlacasReoperadas = new Set(allRows.filter((r) => r.placaId).map((r) => r.placaId)).size;
-  const totalPendientes = allRows.filter((r) => r.estado === 'pendiente').length;
+  const totalPlacasPendientes = new Set(allRows.filter((r) => r.estado === 'pendiente' && r.placaId).map((r) => r.placaId)).size;
   const totalPlacasRecuperadas = new Set(recuperaciones.filter((r) => r.placa_id).map((r) => r.placa_id)).size;
 
   const canOperate = profile ? canRegisterOperations(profile.role) : false;
@@ -211,8 +211,8 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
     usuario: displayName,
     filtros: describeFilters(filters),
     kpis: [
-      { label: 'Total reoperaciones', value: filteredRows.length },
-      { label: 'Pendientes', value: filteredRows.filter((r) => r.estado === 'pendiente').length },
+      { label: 'Registros de reoperación', value: filteredRows.length },
+      { label: 'Placas pendientes', value: new Set(filteredRows.filter((r) => r.estado === 'pendiente' && r.placaId).map((r) => r.placaId)).size },
     ],
   });
 
@@ -254,7 +254,7 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
         description={
           selected
             ? `Reoperaciones de la producción ${productionDisplayLabel(selected)}.`
-            : 'Listado de reoperaciones de la producción seleccionada.'
+            : 'Registros de reoperación de la producción seleccionada.'
         }
         actions={
           <ExportMenu
@@ -269,10 +269,10 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
 
       <PageLoader loading={loading} error={error} onRetry={() => void reload()} hasData={reoperaciones.length > 0}>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <KpiCard icon={RotateCcw} label="Total reoperaciones" value={totalReoperaciones} tone="amber" />
-          <KpiCard icon={Package} label="Placas reoperadas" value={totalPlacasReoperadas} tone="navy" />
-          <KpiCard icon={AlertCircle} label="Pendientes" value={totalPendientes} tone="red" />
-          <KpiCard icon={CheckCircle2} label="Placas recuperadas" value={totalPlacasRecuperadas} tone="emerald" />
+          <KpiCard icon={RotateCcw} label="Registros de reoperación" value={totalReoperaciones} tone="amber" hint="Cada vez que una placa fue enviada a reoperar." />
+          <KpiCard icon={Package} label="Placas reoperadas" value={totalPlacasReoperadas} tone="navy" hint="Placas distintas con al menos una reoperación." />
+          <KpiCard icon={AlertCircle} label="Placas pendientes" value={totalPlacasPendientes} tone="red" hint="Placas con una reoperación sin resolver. Cada placa cuenta una sola vez." />
+          <KpiCard icon={CheckCircle2} label="Placas recuperadas" value={totalPlacasRecuperadas} tone="emerald" hint="Placas distintas con una recuperación registrada." />
         </div>
 
         <div className="rounded-2xl border border-border bg-card px-5 py-4 shadow-sm">
@@ -321,7 +321,7 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
 
         <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
           <span>
-            Mostrando {filteredRows.length} de {allRows.length} reoperaciones
+            Mostrando {filteredRows.length} de {allRows.length} registros de reoperación
           </span>
           {filtersActive && (
             <button type="button" onClick={() => updateFilters(EMPTY_FILTERS)} className="font-medium text-accent hover:underline">
@@ -347,7 +347,7 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
             totalPages={totalPages}
             onPageChange={setPage}
             disabled={loading}
-            summary={`Mostrando ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredRows.length)} de ${filteredRows.length} reoperaciones`}
+            summary={`Mostrando ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filteredRows.length)} de ${filteredRows.length} registros de reoperación`}
           />
         )}
       </PageLoader>

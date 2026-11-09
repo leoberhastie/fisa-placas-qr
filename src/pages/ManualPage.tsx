@@ -268,10 +268,24 @@ const SECTIONS: SectionDef[] = [
           <li>Serie, caja, servicio, proceso, estado y operador.</li>
           <li>Rango de fechas (inicial y final).</li>
         </ul>
+        <p>Encima de la tabla aparecen cuatro indicadores. Es importante distinguir entre registros y placas:</p>
+        <ul className="ml-4 list-disc space-y-1">
+          <li>
+            <strong className="text-foreground">Registros de reoperación:</strong> cada vez que una placa fue enviada a reoperar. Si una misma placa se reoperó dos veces, suma dos registros.
+          </li>
+          <li>
+            <strong className="text-foreground">Placas reoperadas:</strong> placas distintas que tienen al menos una reoperación, sin importar cuántas veces.
+          </li>
+          <li>
+            <strong className="text-foreground">Placas pendientes:</strong> placas que tienen una reoperación sin resolver. Cada placa cuenta una sola vez, aunque tenga varios registros pendientes.
+          </li>
+          <li>
+            <strong className="text-foreground">Placas recuperadas:</strong> placas distintas con una recuperación registrada.
+          </li>
+        </ul>
         <p>
-          Encima de la tabla aparecen indicadores con el total de reoperaciones, placas afectadas,
-          pendientes y recuperaciones. Los resultados se muestran en páginas de 50 registros. Si su rol lo
-          permite, puede marcar una reoperación pendiente como recuperada directamente desde la lista.
+          Los resultados se muestran en páginas de 50 registros. Si su rol lo permite, puede marcar una
+          reoperación pendiente como recuperada directamente desde la lista.
         </p>
         <p>
           Los datos filtrados se pueden exportar a Excel y PDF con los botones de la esquina superior.
@@ -341,8 +355,19 @@ const SECTIONS: SectionDef[] = [
       <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
         <p>
           Es la vista resumida para supervisión y gerencia. Presenta métricas globales de la producción
-          activa en tarjetas e indicadores visuales: total de reoperaciones, pendientes, recuperaciones,
-          placas afectadas, cajas pendientes y servicios completos.
+          activa en tarjetas e indicadores visuales. Cada tarjeta muestra una explicación breve debajo de su
+          número. Las principales son:
+        </p>
+        <ul className="ml-4 list-disc space-y-1">
+          <li><strong className="text-foreground">Placas con incidencias:</strong> placas con al menos una reoperación pendiente.</li>
+          <li><strong className="text-foreground">Placas afectadas (histórico):</strong> placas distintas que alguna vez tuvieron reoperación, incluidas las ya recuperadas.</li>
+          <li><strong className="text-foreground">Porcentaje de placas afectadas:</strong> placas afectadas (histórico) entre el total de placas.</li>
+          <li><strong className="text-foreground">Reoperaciones pendientes:</strong> registros de reoperación sin resolver. Una placa puede tener más de uno.</li>
+          <li><strong className="text-foreground">Cajas y servicios:</strong> cuántas cajas y servicios tienen pendientes o están completos.</li>
+        </ul>
+        <p>
+          Estas cifras cuentan registros y placas de formas distintas; por eso no siempre coinciden con la
+          pantalla de Reoperaciones generales, que muestra placas pendientes.
         </p>
         <p>
           Los datos se calculan mediante consultas agrupadas en el servidor, por lo que la pantalla se

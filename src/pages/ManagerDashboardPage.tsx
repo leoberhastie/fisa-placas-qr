@@ -96,17 +96,17 @@ export function ManagerDashboardPage({ onNavigate }: ScreenProps) {
         <PageLoader loading={loading} error={error} onRetry={handleRefreshData} hasData={!loading && !error}>
           <>
           <section aria-label="Reoperaciones y recuperaciones" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard label="Reoperaciones pendientes" value={value(metrics.reoperacionesPendientes)} icon={AlertTriangle} tone="red" />
-            <KpiCard label="Total histórico de reoperaciones" value={value(metrics.totalReoperaciones)} icon={RotateCcw} tone="navy" />
-            <KpiCard label="Total de recuperaciones" value={value(metrics.totalRecuperaciones)} icon={CheckCircle2} tone="emerald" />
-            <KpiCard label="Porcentaje de recuperación" value={pct(metrics.porcentajeRecuperacion)} icon={Percent} tone="emerald" />
+            <KpiCard label="Reoperaciones pendientes" value={value(metrics.reoperacionesPendientes)} icon={AlertTriangle} tone="red" hint="Registros de reoperación sin resolver. Una placa puede tener más de uno." />
+            <KpiCard label="Total histórico de reoperaciones" value={value(metrics.totalReoperaciones)} icon={RotateCcw} tone="navy" hint="Cada vez que una placa fue enviada a reoperar." />
+            <KpiCard label="Total de recuperaciones" value={value(metrics.totalRecuperaciones)} icon={CheckCircle2} tone="emerald" hint="Cada recuperación registrada." />
+            <KpiCard label="Porcentaje de recuperación" value={pct(metrics.porcentajeRecuperacion)} icon={Percent} tone="emerald" hint="Registros de reoperación ya resueltos entre el total de registros." />
           </section>
 
           <section aria-label="Placas" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard label="Cantidad de placas" value={value(metrics.totalPlacas)} icon={Rows3} tone="slate" />
-            <KpiCard label="Placas con incidencias" value={value(metrics.placasConPendientes)} icon={Wrench} tone="amber" />
-            <KpiCard label="Porcentaje de placas afectadas" value={pct(metrics.porcentajePlacasAfectadas)} icon={Percent} tone="amber" />
-            <KpiCard label="Placas afectadas (histórico)" value={value(metrics.placasAfectadas)} icon={Package} tone="slate" />
+            <KpiCard label="Cantidad de placas" value={value(metrics.totalPlacas)} icon={Rows3} tone="slate" hint="Placas importadas en la producción." />
+            <KpiCard label="Placas con incidencias" value={value(metrics.placasConPendientes)} icon={Wrench} tone="amber" hint="Placas con al menos una reoperación pendiente." />
+            <KpiCard label="Porcentaje de placas afectadas" value={pct(metrics.porcentajePlacasAfectadas)} icon={Percent} tone="amber" hint="Placas afectadas (histórico) entre el total de placas." />
+            <KpiCard label="Placas afectadas (histórico)" value={value(metrics.placasAfectadas)} icon={Package} tone="slate" hint="Placas distintas que tuvieron reoperación, incluidas las ya recuperadas." />
           </section>
 
           <section aria-label="Cajas y servicios" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
