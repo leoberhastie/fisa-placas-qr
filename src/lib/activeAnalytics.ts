@@ -22,6 +22,7 @@ export interface ProcesoDistribucionRow {
   proceso: string;
   total: number;
   porcentaje: number;
+  porcentajeTotal: number;
 }
 
 export type EstadoCajaGlobal = ReportData['estadoCajas'][number] & { produccion: string };
@@ -93,7 +94,7 @@ function mergeServicios(snapshots: ProductionSnapshot[]): ReportData['servicioGe
   const merged = mergeBy(
     snapshots.flatMap((s) => s.report.servicioGeneral),
     (row) => row.servicio,
-    ['series', 'cajas', 'placas', 'reoperaciones', 'recuperadas', 'pendientes', 'recuperaciones'],
+    ['series', 'cajas', 'placas', 'reoperaciones', 'recuperadas', 'placasRecuperadas', 'pendientes', 'recuperaciones'],
   );
   const totalReoperaciones = sumOf(merged, (row) => row.reoperaciones);
   return merged
@@ -104,13 +105,19 @@ function mergeServicios(snapshots: ProductionSnapshot[]): ReportData['servicioGe
 function buildDistribucionProcesos(
   reopsByServicioProceso: ReportData['reopsByServicioProceso'],
   placasAfectadas: number,
+  totalReoperaciones: number,
 ): ProcesoDistribucionRow[] {
   const porProceso = new Map<string, number>();
   for (const row of reopsByServicioProceso) {
     porProceso.set(row.proceso, (porProceso.get(row.proceso) ?? 0) + row.total);
   }
   return [...porProceso.entries()]
-    .map(([proceso, total]) => ({ proceso, total, porcentaje: percent(total, placasAfectadas) }))
+    .map(([proceso, total]) => ({
+      proceso,
+      total,
+      porcentaje: percent(total, placasAfectadas),
+      porcentajeTotal: percent(total, totalReoperaciones),
+    }))
     .sort((a, b) => compareText(a.proceso, b.proceso));
 }
 
@@ -137,7 +144,7 @@ export function aggregateActiveProductions(snapshots: ProductionSnapshot[]): Act
       porcentajeReoperaciones: percent(s.metrics.totalReoperaciones, totals.placasAfectadas),
       }))
       .sort((a, b) => compareText(a.produccion, b.produccion)),
-    distribucionProcesos: buildDistribucionProcesos(reopsByServicioProceso, totals.placasAfectadas),
+    distribucionProcesos: buildDistribucionProcesos(reopsByServicioProceso, totals.placasAfectadas, totals.totalReoperaciones),
     servicioGeneral: mergeServicios(snapshots),
     reopsByServicioProceso: [...reopsByServicioProceso].sort(
       (a, b) => compareText(a.servicio, b.servicio) || compareText(a.proceso, b.proceso),

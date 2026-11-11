@@ -38,6 +38,16 @@ const PROCESO_COLUMNS: ExportColumn<ProcesoDistribucionRow>[] = [
   { header: 'Proceso', value: (r) => r.proceso },
   { header: 'Reoperaciones', value: (r) => r.total },
   { header: '% de placas con reoperación', value: (r) => formatPercent(r.porcentaje) },
+  { header: '% del total de reoperaciones', value: (r) => formatPercent(r.porcentajeTotal) },
+];
+
+const SERVICIO_ANALISIS_COLUMNS: ExportColumn<ServicioRow>[] = [
+  { header: 'Servicio', value: (r) => r.servicio },
+  { header: 'Placas totales', value: (r) => r.placas },
+  { header: 'Reoperaciones', value: (r) => r.reoperaciones },
+  { header: 'Placas pendientes', value: (r) => r.pendientes },
+  { header: 'Placas recuperadas', value: (r) => r.placasRecuperadas },
+  { header: '% defectos', value: (r) => formatPercent(r.placas > 0 ? (r.reoperaciones / r.placas) * 100 : 0) },
 ];
 
 const SERVICIO_COLUMNS: ExportColumn<ServicioRow>[] = [
@@ -145,6 +155,15 @@ export function ActiveAnalyticsPage() {
     { header: 'Proceso', cell: (r) => <span className="font-semibold text-primary">{r.proceso}</span> },
     { header: 'Reoperaciones', cell: (r) => <span className="tabular-nums">{r.total}</span> },
     { header: '% de placas con reoperación', cell: (r) => <span className="font-semibold tabular-nums">{formatPercent(r.porcentaje)}</span> },
+    { header: '% del total de reoperaciones', cell: (r) => <span className="font-semibold tabular-nums text-accent">{formatPercent(r.porcentajeTotal)}</span> },
+  ];
+  const servicioAnalisisColumns: DataTableColumn<ServicioRow>[] = [
+    { header: 'Servicio', cell: (r) => <span className="font-semibold text-primary">{r.servicio}</span> },
+    { header: 'Placas totales', cell: (r) => <span className="tabular-nums">{r.placas}</span> },
+    { header: 'Reoperaciones', cell: (r) => <span className="tabular-nums">{r.reoperaciones}</span> },
+    { header: 'Placas pendientes', cell: (r) => <span className="tabular-nums text-warning">{r.pendientes}</span> },
+    { header: 'Placas recuperadas', cell: (r) => <span className="tabular-nums text-success">{r.placasRecuperadas}</span> },
+    { header: '% defectos', cell: (r) => <span className="font-semibold tabular-nums">{formatPercent(r.placas > 0 ? (r.reoperaciones / r.placas) * 100 : 0)}</span> },
   ];
   const servicioColumns: DataTableColumn<ServicioRow>[] = [
     { header: 'Servicio', cell: (r) => r.servicio },
@@ -191,7 +210,23 @@ export function ActiveAnalyticsPage() {
   ];
   const porcentajeProduccionItems = comparison.map((c) => ({ label: c.produccion, value: c.porcentajeReoperaciones }));
   const porcentajeProduccionMax = Math.max(100, ...porcentajeProduccionItems.map((i) => i.value));
-  const procesoItems = distribucionProcesos.map((p) => ({ label: p.proceso, value: p.porcentaje }));
+  const servicioAnalisisTotals: ServicioRow = {
+    servicio: 'Totales',
+    tipoServicio: 'PZ',
+    series: 0,
+    cajas: 0,
+    placas: servicios.reduce((sum, row) => sum + row.placas, 0),
+    reoperaciones: servicios.reduce((sum, row) => sum + row.reoperaciones, 0),
+    recuperadas: servicios.reduce((sum, row) => sum + row.recuperadas, 0),
+    placasRecuperadas: servicios.reduce((sum, row) => sum + row.placasRecuperadas, 0),
+    pendientes: servicios.reduce((sum, row) => sum + row.pendientes, 0),
+    recuperaciones: servicios.reduce((sum, row) => sum + row.recuperaciones, 0),
+    porcentajeTotal: 0,
+  };
+  const servicioAnalisisRows = [...servicios, servicioAnalisisTotals];
+  const servicioDefectosItems = servicios.map((row) => ({ label: row.servicio, value: row.placas > 0 ? (row.reoperaciones / row.placas) * 100 : 0 }));
+  const servicioDefectosMax = Math.max(100, ...servicioDefectosItems.map((item) => item.value));
+  const procesoItems = distribucionProcesos.map((p) => ({ label: p.proceso, value: p.porcentajeTotal }));
   const procesoMax = Math.max(100, ...procesoItems.map((i) => i.value));
 
   const hasMovement = totals !== null && totals.totalReoperaciones + totals.totalRecuperaciones > 0;
@@ -287,8 +322,26 @@ export function ActiveAnalyticsPage() {
       </ReportSection>
 
       <ReportSection
+        title="Defectos principales por servicio"
+        description="Todas las producciones activas agrupadas por servicio. El porcentaje de defectos compara los registros de reoperación contra las placas totales del servicio. Las placas pendientes y recuperadas cuentan placas únicas."
+        actions={exportMenu(
+          'Defectos principales por servicio',
+          'defectos-principales-servicio-activas',
+          SERVICIO_ANALISIS_COLUMNS,
+          servicioAnalisisRows,
+          [{ title: '% de defectos por servicio', items: servicioDefectosItems }],
+        )}
+      >
+        <div className="mb-6 rounded-xl border border-border bg-muted/50 p-4 sm:p-5">
+          <h3 className="mb-4 text-sm font-semibold text-primary">Porcentaje de defectos por servicio</h3>
+          <HorizontalBars items={servicioDefectosItems} maxValue={servicioDefectosMax} formatValue={formatPercent} emptyText="Sin servicios activos para graficar." />
+        </div>
+        <DataTable columns={servicioAnalisisColumns} rows={servicioAnalisisRows} getRowKey={(r) => r.servicio} {...TABLE_EMPTY} />
+      </ReportSection>
+
+      <ReportSection
         title="Distribución de reoperaciones por proceso"
-        description="Reoperaciones de cada proceso frente a las placas con reoperación de todas las producciones activas (100%). Una placa puede repetir proceso, por lo que los porcentajes pueden sumar más de 100%."
+        description="Muestra el porcentaje de defectos por proceso frente al total de reoperaciones registradas. Una placa puede repetir proceso, por lo que estos porcentajes pueden sumar más de 100%."
         actions={exportMenu(
           'Distribución de reoperaciones por proceso',
           'distribucion-reoperaciones-proceso',

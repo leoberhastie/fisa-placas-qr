@@ -94,6 +94,7 @@ export interface ReportData {
     placas: number;
     reoperaciones: number;
     recuperadas: number;
+    placasRecuperadas: number;
     pendientes: number;
     recuperaciones: number;
     porcentajeTotal: number;
