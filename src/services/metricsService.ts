@@ -282,6 +282,19 @@ export async function fetchReportData(produccionId: string): Promise<ReportData>
   return data as ReportData;
 }
 
+export async function fetchRepeatedReoperationPlates(produccionId: string): Promise<ReportData['topPlacas']> {
+  const { data, error } = await supabase.rpc('list_placas_con_mas_reoperaciones', { p_produccion_id: produccionId });
+  if (error || !Array.isArray(data)) throw new Error('No se pudieron cargar las placas con reoperaciones repetidas.');
+  return data.map((row: Record<string, unknown>) => ({
+    serie: String(row.serie ?? '—'),
+    posicion: String(row.posicion ?? '—'),
+    servicio: String(row.servicio ?? 'Sin servicio'),
+    caja: String(row.caja ?? '—'),
+    reoperaciones: Number(row.reoperaciones ?? 0),
+    pendientes: Number(row.pendientes ?? 0),
+  }));
+}
+
 export interface BoxPageResult {
   boxes: BoxMetricRow[];
   totalCount: number;

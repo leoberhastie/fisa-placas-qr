@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, Package, RotateCcw, Users, Wrench } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Pagination } from '@/components/ui/Pagination';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
@@ -8,17 +8,20 @@ import { SelectedProductionBanner } from '@/components/productions/SelectedProdu
 import { DataUpdatedAlert } from '@/components/import/DataUpdatedAlert';
 import { ExportMenu } from '@/components/export/ExportMenu';
 import { ReportSection } from '@/components/reports/ReportSection';
+import { PlacaHistoryModal } from '@/components/history/PlacaHistoryModal';
 import { HorizontalBars } from '@/components/reports/HorizontalBars';
 import { OperationStatusBadge, BOX_STATUS_LABELS, SERVICE_STATUS_LABELS } from '@/components/metrics/OperationStatusBadge';
 import { useAuth } from '@/context/AuthContext';
 import { useProductionSelection } from '@/context/ProductionSelectionContext';
 import { useProductionMetrics } from '@/hooks/useProductionMetrics';
-import { fetchReportData } from '@/services/metricsService';
+import { useHistoryData } from '@/hooks/useHistoryData';
+import { fetchReportData, fetchRepeatedReoperationPlates } from '@/services/metricsService';
 import { useVersionedData } from '@/hooks/useVersionedData';
 import { useProductions } from '@/hooks/useProductions';
 import { exportExcel, exportPdf, type ExportChart, type ExportColumn, type ExportMeta } from '@/lib/exportFiles';
 import type { EstadoRow, EvolucionRow, MotivoRow, RecupOperadorRow, RecupServicioRow, ReopServicioProcesoRow, ServicioGeneralRow, TopPlacaRow } from '@/lib/reportMetrics';
 import type { ServiceMetrics } from '@/lib/operationMetrics';
+import { buildHistoryRows, type HistoryRow } from '@/lib/operationHistory';
 import { formatPercent } from '@/lib/percentFormat';
 import { SERVICE_EXPORT_COLUMNS } from '@/lib/operationExportColumns';
 import { productionDisplayLabel } from '@/types/domain';
@@ -101,11 +104,21 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
     fetchReportData,
     'No se pudieron cargar los reportes.',
   );
+  const { data: repeatedPlates, loading: repeatedPlatesLoading, error: repeatedPlatesError, reload: reloadRepeatedPlates } = useVersionedData(
+    'report-repeated-plates',
+    selectedProductionId,
+    fetchRepeatedReoperationPlates,
+    'No se pudieron cargar las placas con reoperaciones repetidas.',
+  );
+  const { placas, reoperaciones, recuperaciones, historial } = useHistoryData(selectedProductionId);
   const loadedVersion = metricsVersion !== null && reportVersion !== null ? Math.min(metricsVersion, reportVersion) : null;
+
+  const [placaSerie, setPlacaSerie] = useState<string | null>(null);
 
   const handleRefreshData = () => {
     void reloadMetrics();
     void reloadReport();
+    void reloadRepeatedPlates();
   };
 
   const servicioGeneralRows = reportData?.servicioGeneral ?? [];
@@ -118,7 +131,7 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
   const cajasStart = cajas.length === 0 ? 0 : (cajasCurrentPage - 1) * CAJAS_PAGE_SIZE + 1;
   const cajasEnd = Math.min(cajasCurrentPage * CAJAS_PAGE_SIZE, cajas.length);
   const cajasPageRows = cajas.slice((cajasCurrentPage - 1) * CAJAS_PAGE_SIZE, cajasCurrentPage * CAJAS_PAGE_SIZE);
-  const top = reportData?.topPlacas ?? [];
+  const top = repeatedPlates ?? [];
   const evolucion = reportData?.evolucion ?? [];
   const operadores = reportData?.recupsPorOperador ?? [];
   const motivos = reportData?.incidenciasPorMotivo ?? [];
@@ -126,8 +139,20 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
   const selected = productions.find((item) => item.id === selectedProductionId) ?? null;
   const produccionLabel = selected ? productionDisplayLabel(selected) : '—';
   const usuario = operatorName ?? profile?.full_name ?? session?.user.email ?? '—';
-  const loading = metricsLoading || reportLoading;
-  const error = metricsError ?? reportError;
+  const loading = metricsLoading || reportLoading || repeatedPlatesLoading;
+  const error = metricsError ?? reportError ?? repeatedPlatesError;
+  const placaRows = useMemo<HistoryRow[]>(
+    () => (placaSerie ? buildHistoryRows(placas, reoperaciones, recuperaciones, historial).filter((row) => row.serie === placaSerie) : []),
+    [placaSerie, placas, reoperaciones, recuperaciones, historial],
+  );
+  const placaData = useMemo(() => {
+    if (!placaSerie) return null;
+    const placa = placas.find((item) => item.serie === placaSerie) ?? null;
+    const placaReoperaciones = placa ? reoperaciones.filter((item) => item.placa_id === placa.id) : [];
+    const placaRecuperaciones = placa ? recuperaciones.filter((item) => item.placa_id === placa.id) : [];
+    const cajaPlacas = placa ? placas.filter((item) => item.numero_caja === placa.numero_caja && item.servicio === placa.servicio) : [];
+    return { placa, reoperaciones: placaReoperaciones, recuperaciones: placaRecuperaciones, cajaPlacas };
+  }, [placaSerie, placas, reoperaciones, recuperaciones]);
   const hasData = reopProceso.length > 0 || recupServicio.length > 0;
 
   const buildMeta = (title: string, fileBase: string, charts?: ExportChart[]): ExportMeta => ({
@@ -182,7 +207,14 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
     { header: 'Estado', cell: (r) => <OperationStatusBadge status={r.estado} labels={BOX_STATUS_LABELS} /> },
   ];
   const topColumns: DataTableColumn<TopPlacaRow>[] = [
-    { header: 'Serie', cell: (r) => <span className="font-mono">{r.serie}</span> },
+    {
+      header: 'Serie',
+      cell: (r) => (
+        <button type="button" onClick={() => setPlacaSerie(r.serie)} className="font-mono font-semibold text-accent hover:underline">
+          {r.serie}
+        </button>
+      ),
+    },
     { header: 'Posición', cell: (r) => r.posicion },
     { header: 'Servicio', cell: (r) => r.servicio },
     { header: 'Caja', cell: (r) => <span className="font-mono">{r.caja}</span> },
@@ -324,7 +356,7 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
 
       <ReportSection
         title="Placas con más reoperaciones"
-        description="Las 10 placas con mayor cantidad de reoperaciones."
+        description="Todas las placas con más de una reoperación. Pulsa la serie para consultar quién registró cada movimiento y cuándo."
         actions={exportMenu(
           'Placas con más reoperaciones',
           'placas-mas-reoperadas',
@@ -372,6 +404,17 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
         <HorizontalBars items={motivos.map((r) => ({ label: r.motivo, value: r.total }))} />
         <DataTable columns={motivoColumns} rows={motivos} getRowKey={(r) => r.motivo} {...tableEmpty} />
       </ReportSection>
+      {placaSerie && placaData && (
+        <PlacaHistoryModal
+          serie={placaSerie}
+          rows={placaRows}
+          placa={placaData.placa}
+          reoperaciones={placaData.reoperaciones}
+          recuperaciones={placaData.recuperaciones}
+          cajaPlacas={placaData.cajaPlacas}
+          onClose={() => setPlacaSerie(null)}
+        />
+      )}
     </div>
   );
 }
