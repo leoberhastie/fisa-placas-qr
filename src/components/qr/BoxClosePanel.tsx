@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
+  ArrowLeft,
+  Check,
   CheckCircle2,
   ChevronRight,
   Inbox,
   Layers,
+  Loader2,
   Lock,
   PackageCheck,
   RotateCcw,
@@ -13,25 +16,40 @@ import {
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ServiceCardStep } from '@/components/qr/BatchStepCards';
+import { PlacaSeriesGrid } from '@/components/qr/PlacaSeriesGrid';
 import {
   fetchBoxMetrics,
   markBoxCompleted,
   reopenBox,
   type BoxMetricRow,
 } from '@/services/metricsService';
+import {
+  createRecuperacionesBatch,
+  insertHistorialBatch,
+  listPendingPlacasByBox,
+  type HistorialInput,
+  type RecuperacionInput,
+} from '@/services/operationService';
 import { listServiceSummaries, type ServiceSummary } from '@/services/serviceBoxImportService';
 import type { MetricStatus } from '@/lib/metricsTypes';
+import type { Placa } from '@/types/domain';
 
 type PendingAction = { tipo: 'cerrar' | 'reabrir'; box: BoxMetricRow } | null;
 
+type BoxFilter = 'todas' | 'cerradas' | 'bloqueadas' | 'listas';
+
 interface BoxClosePanelProps {
   produccionId: string;
+  operador?: string;
+  usuario?: string;
   open: boolean;
   onClose: () => void;
   onCompleted: () => void;
 }
 
-export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxClosePanelProps) {
+const RECUPERACION_TIPO = 'Recuperación desde cierre de caja';
+
+export function BoxClosePanel({ produccionId, operador = '', usuario = '', open, onClose, onCompleted }: BoxClosePanelProps) {
   const [services, setServices] = useState<ServiceSummary[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
   const [servicio, setServicio] = useState('');
@@ -41,6 +59,14 @@ export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxC
   const [pending, setPending] = useState<PendingAction>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [boxFilter, setBoxFilter] = useState<BoxFilter>('todas');
+  const [recoveryBox, setRecoveryBox] = useState<BoxMetricRow | null>(null);
+  const [recoveryPlacas, setRecoveryPlacas] = useState<Placa[]>([]);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoverySelected, setRecoverySelected] = useState<Set<string>>(new Set());
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const [confirmRecovery, setConfirmRecovery] = useState(false);
 
   useEffect(() => {
     if (!open || !produccionId) return;
@@ -55,28 +81,20 @@ export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxC
       .finally(() => setServicesLoading(false));
   }, [open, produccionId]);
 
+  const refreshBoxes = useCallback(() => {
+    if (!servicio || !produccionId) return Promise.resolve();
+    return fetchBoxMetrics(produccionId)
+      .then((all) => setBoxes(all.filter((b) => b.servicio === servicio)))
+      .catch(() => setError('No se pudieron cargar las cajas del servicio.'));
+  }, [produccionId, servicio]);
+
   useEffect(() => {
     if (!open || !servicio || !produccionId) return;
     setBoxesLoading(true);
     setBoxes([]);
     setError(null);
-    fetchBoxMetrics(produccionId)
-      .then((all) => setBoxes(all.filter((b) => b.servicio === servicio)))
-      .catch(() => setError('No se pudieron cargar las cajas del servicio.'))
-      .finally(() => setBoxesLoading(false));
-  }, [open, produccionId, servicio]);
-
-  const filteredBoxes = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const sorted = [...boxes].sort((a, b) => {
-      const na = parseFloat(a.caja);
-      const nb = parseFloat(b.caja);
-      if (!isNaN(na) && !isNaN(nb)) return na - nb;
-      return a.caja.localeCompare(b.caja, undefined, { numeric: true });
-    });
-    if (!q) return sorted;
-    return sorted.filter((b) => b.caja.toLowerCase().includes(q));
-  }, [boxes, search]);
+    refreshBoxes().finally(() => setBoxesLoading(false));
+  }, [open, produccionId, servicio, refreshBoxes]);
 
   const counts = useMemo(() => {
     let cerradas = 0;
@@ -90,7 +108,26 @@ export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxC
     return { cerradas, pendientes, listas };
   }, [boxes]);
 
-  const step = !servicio ? 1 : 2;
+  const filteredBoxes = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const sorted = [...boxes].sort((a, b) => {
+      const na = parseFloat(a.caja);
+      const nb = parseFloat(b.caja);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      return a.caja.localeCompare(b.caja, undefined, { numeric: true });
+    });
+    const byFilter = sorted.filter((b) => {
+      if (boxFilter === 'todas') return true;
+      if (boxFilter === 'cerradas') return b.completadaManual;
+      if (boxFilter === 'bloqueadas') return !b.completadaManual && b.pendientes > 0;
+      if (boxFilter === 'listas') return !b.completadaManual && b.pendientes === 0;
+      return true;
+    });
+    if (!q) return byFilter;
+    return byFilter.filter((b) => b.caja.toLowerCase().includes(q));
+  }, [boxes, search, boxFilter]);
+
+  const step = !servicio ? 1 : recoveryBox ? 3 : 2;
 
   const handleConfirm = useCallback(async () => {
     if (!pending) return;
@@ -102,8 +139,7 @@ export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxC
       } else {
         await reopenBox(produccionId, pending.box.servicio, pending.box.caja);
       }
-      const refreshed = await fetchBoxMetrics(produccionId);
-      setBoxes(refreshed.filter((b) => b.servicio === servicio));
+      await refreshBoxes();
       setPending(null);
       onCompleted();
     } catch (err) {
@@ -111,15 +147,95 @@ export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxC
     } finally {
       setBusy(false);
     }
-  }, [pending, produccionId, servicio, onCompleted]);
+  }, [pending, produccionId, refreshBoxes, onCompleted]);
+
+  const openRecovery = useCallback(async (box: BoxMetricRow) => {
+    setRecoveryBox(box);
+    setRecoveryError(null);
+    setRecoverySelected(new Set());
+    setRecoveryLoading(true);
+    try {
+      const placas = await listPendingPlacasByBox(produccionId, box.servicio, box.caja);
+      setRecoveryPlacas(placas);
+    } catch {
+      setRecoveryError('No se pudieron cargar las placas pendientes de la caja.');
+      setRecoveryPlacas([]);
+    } finally {
+      setRecoveryLoading(false);
+    }
+  }, [produccionId]);
+
+  const toggleRecoverySelection = useCallback((id: string) => {
+    setRecoverySelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const selectAllRecovery = useCallback(() => {
+    setRecoverySelected(new Set(recoveryPlacas.map((p) => p.id)));
+  }, [recoveryPlacas]);
+
+  const clearRecoverySelection = useCallback(() => {
+    setRecoverySelected(new Set());
+  }, []);
+
+  const handleConfirmRecovery = useCallback(async () => {
+    if (!recoveryBox || recoverySelected.size === 0) return;
+    setRecoveryBusy(true);
+    setRecoveryError(null);
+    try {
+      const selectedPlacas = recoveryPlacas.filter((p) => recoverySelected.has(p.id));
+      const recupInputs: RecuperacionInput[] = selectedPlacas.map((p) => ({
+        produccion_id: produccionId,
+        placa_id: p.id,
+        operador,
+        usuario,
+        tipo_recuperacion: RECUPERACION_TIPO,
+        observaciones: '',
+      }));
+      const histInputs: HistorialInput[] = selectedPlacas.map((p) => ({
+        produccion_id: produccionId,
+        placa_id: p.id,
+        tipo_operacion: 'recuperacion',
+        proceso: '',
+        operador,
+        usuario,
+        estado_anterior: 'pendiente',
+        estado_nuevo: 'completo',
+        observaciones: RECUPERACION_TIPO,
+      }));
+      await createRecuperacionesBatch(recupInputs);
+      await insertHistorialBatch(histInputs);
+      setConfirmRecovery(false);
+      setRecoveryBox(null);
+      setRecoveryPlacas([]);
+      setRecoverySelected(new Set());
+      await refreshBoxes();
+      onCompleted();
+    } catch (err) {
+      setRecoveryError(err instanceof Error ? err.message : 'No se pudieron recuperar las placas.');
+      setConfirmRecovery(false);
+    } finally {
+      setRecoveryBusy(false);
+    }
+  }, [recoveryBox, recoverySelected, recoveryPlacas, produccionId, operador, usuario, refreshBoxes, onCompleted]);
 
   const handleClose = () => {
-    if (busy) return;
+    if (busy || recoveryBusy) return;
     setServicio('');
     setBoxes([]);
     setSearch('');
     setError(null);
     setPending(null);
+    setBoxFilter('todas');
+    setRecoveryBox(null);
+    setRecoveryPlacas([]);
+    setRecoverySelected(new Set());
+    setRecoveryError(null);
+    setConfirmRecovery(false);
     onClose();
   };
 
@@ -140,11 +256,36 @@ export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxC
             <nav className="flex flex-wrap items-center gap-1.5 text-sm">
               <button
                 type="button"
-                onClick={() => { setServicio(''); setBoxes([]); }}
+                onClick={() => {
+                  if (recoveryBox) {
+                    setRecoveryBox(null);
+                    setRecoveryPlacas([]);
+                    setRecoverySelected(new Set());
+                    setRecoveryError(null);
+                    return;
+                  }
+                  setServicio('');
+                  setBoxes([]);
+                  setBoxFilter('todas');
+                }}
                 className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary transition hover:bg-primary/20"
               >
-                {servicio}
+                {recoveryBox ? (
+                  <span className="flex items-center gap-1">
+                    <ArrowLeft className="h-3 w-3" /> Volver a cajas
+                  </span>
+                ) : (
+                  servicio
+                )}
               </button>
+              {recoveryBox && (
+                <>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <span className="rounded-full bg-destructive/10 px-3 py-1 font-medium text-destructive">
+                    Caja {recoveryBox.caja} — {recoveryBox.pendientes} pend.
+                  </span>
+                </>
+              )}
             </nav>
           )}
 
@@ -165,7 +306,7 @@ export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxC
                 <StepLabel num={2} icon={<PackageCheck className="h-4 w-4" />} text="Cajas del servicio" />
                 <button
                   type="button"
-                  onClick={() => { setServicio(''); setBoxes([]); }}
+                  onClick={() => { setServicio(''); setBoxes([]); setBoxFilter('todas'); }}
                   className="flex shrink-0 items-center gap-1 text-xs font-medium text-accent hover:underline"
                 >
                   Cambiar servicio
@@ -173,7 +314,12 @@ export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxC
                 </button>
               </div>
 
-              <SummaryChips counts={counts} total={boxes.length} />
+              <SummaryChips
+                counts={counts}
+                total={boxes.length}
+                active={boxFilter}
+                onFilter={setBoxFilter}
+              />
 
               {boxesLoading ? (
                 <LoadingPill text="Cargando cajas..." />
@@ -194,7 +340,7 @@ export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxC
                     </div>
                   )}
                   {filteredBoxes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Ninguna caja coincide con la búsqueda.</p>
+                    <p className="text-sm text-muted-foreground">Ninguna caja coincide con el filtro.</p>
                   ) : (
                     <div className="grid max-h-[58vh] grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-2.5 overflow-y-auto pb-2 pr-1 sm:gap-3">
                       {filteredBoxes.map((box) => (
@@ -203,10 +349,72 @@ export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxC
                           box={box}
                           disabled={busy}
                           onAction={(tipo) => setPending({ tipo, box })}
+                          onRecover={() => void openRecovery(box)}
                         />
                       ))}
                     </div>
                   )}
+                </>
+              )}
+            </div>
+          )}
+
+          {step === 3 && recoveryBox && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <StepLabel num={3} icon={<RotateCcw className="h-4 w-4" />} text={`Recuperar placas pendientes — Caja ${recoveryBox.caja}`} />
+              </div>
+
+              {recoveryError && (
+                <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{recoveryError}</span>
+                </div>
+              )}
+
+              {recoveryLoading ? (
+                <LoadingPill text="Cargando placas pendientes..." />
+              ) : recoveryPlacas.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Esta caja no tiene placas pendientes de reoperación.</p>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {recoverySelected.size} de {recoveryPlacas.length} seleccionada(s)
+                      </p>
+                      <button type="button" onClick={selectAllRecovery} className="text-xs font-medium text-accent hover:underline">
+                        Seleccionar todas
+                      </button>
+                      {recoverySelected.size > 0 && (
+                        <button type="button" onClick={clearRecoverySelection} className="text-xs font-medium text-muted-foreground hover:underline">
+                          Limpiar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <PlacaSeriesGrid
+                    placas={recoveryPlacas}
+                    selectedIds={recoverySelected}
+                    pendingIds={new Set(recoveryPlacas.map((p) => p.id))}
+                    onToggle={toggleRecoverySelection}
+                  />
+                  <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      {recoverySelected.size > 0
+                        ? `${recoverySelected.size} placa(s) seleccionada(s) para recuperar`
+                        : 'Selecciona al menos una placa'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmRecovery(true)}
+                      disabled={recoverySelected.size === 0}
+                      className="flex items-center justify-center gap-2 rounded-lg bg-success px-6 py-3 text-sm font-semibold text-success-foreground shadow-sm transition hover:bg-success disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      Recuperar{recoverySelected.size > 0 ? ` (${recoverySelected.size})` : ''}
+                    </button>
+                  </div>
                 </>
               )}
             </div>
@@ -228,6 +436,17 @@ export function BoxClosePanel({ produccionId, open, onClose, onCompleted }: BoxC
           onCancel={() => { if (!busy) setPending(null); }}
         />
       )}
+
+      {confirmRecovery && recoveryBox && (
+        <ConfirmDialog
+          title="Confirmar recuperación"
+          message={`¿Recuperar ${recoverySelected.size} placa(s) de la caja ${recoveryBox.caja}? Las reoperaciones pendientes anteriores quedarán resueltas.`}
+          confirmLabel="Sí, recuperar"
+          busy={recoveryBusy}
+          onConfirm={handleConfirmRecovery}
+          onCancel={() => { if (!recoveryBusy) setConfirmRecovery(false); }}
+        />
+      )}
     </>
   );
 }
@@ -236,10 +455,12 @@ function BoxCloseCard({
   box,
   disabled,
   onAction,
+  onRecover,
 }: {
   box: BoxMetricRow;
   disabled: boolean;
   onAction: (tipo: 'cerrar' | 'reabrir') => void;
+  onRecover: () => void;
 }) {
   const isClosed = box.completadaManual;
   const hasPending = box.pendientes > 0;
@@ -281,10 +502,15 @@ function BoxCloseCard({
           Reabrir
         </button>
       ) : hasPending ? (
-        <div className="mt-auto flex items-center justify-center gap-1.5 rounded-lg bg-destructive/10 px-2 py-2 text-xs font-semibold text-destructive">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onRecover}
+          className="mt-auto flex items-center justify-center gap-1.5 rounded-lg bg-destructive px-2 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-destructive active:scale-[0.97] disabled:opacity-50"
+        >
           <Lock className="h-3.5 w-3.5" />
-          Bloqueada
-        </div>
+          Recuperar ({box.pendientes})
+        </button>
       ) : canClose ? (
         <button
           type="button"
@@ -336,24 +562,38 @@ function StateBadge({ estado, completadaManual }: { estado: MetricStatus; comple
 function SummaryChips({
   counts,
   total,
+  active,
+  onFilter,
 }: {
   counts: { cerradas: number; pendientes: number; listas: number };
   total: number;
+  active: BoxFilter;
+  onFilter: (f: BoxFilter) => void;
 }) {
+  const chips: { key: BoxFilter; label: string; value: number; cls: string }[] = [
+    { key: 'todas', label: 'cajas', value: total, cls: 'bg-muted text-muted-foreground' },
+    { key: 'cerradas', label: 'cerradas', value: counts.cerradas, cls: 'bg-success/10 text-success' },
+    { key: 'bloqueadas', label: 'bloqueadas', value: counts.pendientes, cls: 'bg-destructive/10 text-destructive' },
+    { key: 'listas', label: 'listas', value: counts.listas, cls: 'bg-primary/10 text-primary' },
+  ];
   return (
     <div className="flex flex-wrap gap-2 text-xs">
-      <span className="rounded-full bg-muted px-3 py-1 font-medium text-muted-foreground">
-        {total} cajas
-      </span>
-      <span className="rounded-full bg-success/10 px-3 py-1 font-semibold text-success">
-        {counts.cerradas} cerradas
-      </span>
-      <span className="rounded-full bg-destructive/10 px-3 py-1 font-semibold text-destructive">
-        {counts.pendientes} bloqueadas
-      </span>
-      <span className="rounded-full bg-primary/10 px-3 py-1 font-semibold text-primary">
-        {counts.listas} listas
-      </span>
+      {chips.map((chip) => {
+        const isActive = active === chip.key;
+        return (
+          <button
+            key={chip.key}
+            type="button"
+            onClick={() => onFilter(chip.key)}
+            className={`rounded-full px-3 py-1 font-semibold transition ${chip.cls} ${
+              isActive ? 'ring-2 ring-offset-1 ring-offset-card ring-current' : 'opacity-70 hover:opacity-100'
+            }`}
+          >
+            {chip.value} {chip.label}
+            {isActive && <Check className="ml-1 inline h-3 w-3" />}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -375,7 +615,7 @@ function StepLabel({ num, icon, text }: { num: number; icon: React.ReactNode; te
 function LoadingPill({ text }: { text: string }) {
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <RotateCcw className="h-4 w-4 animate-spin text-accent" />
+      <Loader2 className="h-4 w-4 animate-spin text-accent" />
       {text}
     </div>
   );

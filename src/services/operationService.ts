@@ -393,6 +393,32 @@ export async function createRecuperacion(input: RecuperacionInput): Promise<Recu
   return data as Recuperacion;
 }
 
+export async function createRecuperacionesBatch(inputs: RecuperacionInput[]): Promise<void> {
+  if (inputs.length === 0) return;
+  const { error } = await supabase.from('recuperaciones').insert(
+    inputs.map((input) => ({
+      produccion_id: input.produccion_id,
+      placa_id: input.placa_id,
+      operador: input.operador,
+      usuario: input.usuario,
+      tipo_recuperacion: input.tipo_recuperacion,
+      observaciones: input.observaciones,
+    })),
+  );
+  if (error) throw new Error('No se pudieron registrar las recuperaciones.');
+}
+
+export async function listPendingPlacasByBox(
+  produccionId: string,
+  servicio: string,
+  numeroCaja: string,
+): Promise<Placa[]> {
+  const allPlacas = await listPlacasByBox(produccionId, servicio, numeroCaja);
+  if (allPlacas.length === 0) return [];
+  const pendingIds = new Set(await listPendingReoperacionPlacaIds(produccionId));
+  return allPlacas.filter((p) => pendingIds.has(p.id));
+}
+
 // =========================================================
 // HISTORIAL
 // =========================================================

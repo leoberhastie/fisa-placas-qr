@@ -503,6 +503,8 @@ export function QrReaderPage({ onNavigate }: ScreenProps) {
 
       <BoxClosePanel
         produccionId={selectedProductionId}
+        operador={displayName}
+        usuario={userEmail}
         open={closeBoxOpen}
         onClose={() => setCloseBoxOpen(false)}
         onCompleted={() => void reload()}
