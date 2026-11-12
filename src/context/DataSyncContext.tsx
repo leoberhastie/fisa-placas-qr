@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { fetchProductionVersions } from '@/services/productionService';
+import { useAuth } from '@/context/AuthContext';
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -25,6 +26,7 @@ function sameVersions(a: ProductionVersions, b: ProductionVersions): boolean {
 }
 
 export function DataSyncProvider({ children }: { children: ReactNode }) {
+  const { session } = useAuth();
   const [versions, setVersions] = useState<ProductionVersions>({});
   const cacheRef = useRef(new Map<string, CacheEntry>());
 
@@ -35,6 +37,7 @@ export function DataSyncProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!session) return;
     const poll = () => {
       if (document.visibilityState !== 'visible') return;
       refreshVersions().catch(() => undefined);
@@ -46,7 +49,7 @@ export function DataSyncProvider({ children }: { children: ReactNode }) {
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', poll);
     };
-  }, [refreshVersions]);
+  }, [refreshVersions, session]);
 
   const actions = useMemo<DataSyncActions>(
     () => ({
