@@ -27,7 +27,7 @@ export function AppSidebar({ open, ...props }: SidebarPanelProps & { open: boole
 }
 
 export function SidebarPanel({ routes, activePath, onNavigate, userName, role, onSignOut, signingOut }: SidebarPanelProps) {
-  const { selectedProductionId } = useProductionSelection();
+  const { selectedProductionId, operatorName } = useProductionSelection();
   const { productions, loading } = useProductions();
   const selectedProduction = productions.find((production) => production.id === selectedProductionId) ?? null;
   const initials = userName.trim().charAt(0).toUpperCase() || 'U';
@@ -104,7 +104,7 @@ export function SidebarPanel({ routes, activePath, onNavigate, userName, role, o
             {initials}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-bold text-sidebar-foreground">{userName}</p>
+            <p className="truncate text-xs font-bold text-sidebar-foreground">{ operatorName || userName}</p>
             <p className="truncate text-xs uppercase tracking-wide text-sidebar-primary">{ROLE_LABELS[role]}</p>
           </div>
           <button
