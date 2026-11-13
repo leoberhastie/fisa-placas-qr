@@ -225,8 +225,11 @@ function ProductionCheckboxCard({
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary/80">
         <Factory className="h-4 w-4" />
       </div>
+      <div className="min-w-0 flex-4">
+        <p className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium bg-primary/10 text-primary">{option.label}</p>
+      </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold text-foreground">{option.label}</p>
+        <p className="shrink-0 px-2.5 py-1 text-ms font-medium">{option.description}</p>
       </div>
       <span
         className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE_CLASS[option.status as ProductionStatus] ?? 'bg-muted text-muted-foreground'}`}
