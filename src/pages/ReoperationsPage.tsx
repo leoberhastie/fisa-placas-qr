@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, Package, RotateCcw, ShieldCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Package, RotateCcw, ShieldCheck, Undo2 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
@@ -8,11 +8,12 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StatusLegend } from '@/components/ui/StatusLegend';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { CierreManualModal } from '@/components/qr/CierreManualModal';
+import { AnularReoperacionModal } from '@/components/qr/AnularReoperacionModal';
 import { FilterInput, FilterSelect } from '@/components/filters/FilterControls';
 import { ExportMenu } from '@/components/export/ExportMenu';
 import { useAuth } from '@/context/AuthContext';
 import { useProductionSelection } from '@/context/ProductionSelectionContext';
-import { listRecuperacionesByProduction, cerrarReoperacionManual } from '@/services/operationService';
+import { listRecuperacionesByProduction, cerrarReoperacionManual, anularReoperacionesPlaca } from '@/services/operationService';
 import { fetchReoperacionesWithPlaca, type ReoperationWithPlaca } from '@/services/metricsService';
 import { useProductions } from '@/hooks/useProductions';
 import { exportExcel, exportPdf, type ExportColumn } from '@/lib/exportFiles';
@@ -22,6 +23,7 @@ import {
   canRegisterOperations,
   productionDisplayLabel,
   REOPERATION_PROCESSES,
+  type AnulacionMotivo,
   type IncidentStatus,
   type Reoperation,
 } from '@/types/domain';
@@ -126,6 +128,8 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
   const [page, setPage] = useState(1);
   const [cierreTarget, setCierreTarget] = useState<ReoperationRow | null>(null);
   const [closing, setClosing] = useState(false);
+  const [anularTarget, setAnularTarget] = useState<ReoperationRow | null>(null);
+  const [anulando, setAnulando] = useState(false);
 
   const selected = productions.find((item) => item.id === selectedProductionId) ?? null;
   const displayName = operatorName ?? profile?.full_name ?? profile?.email ?? '—';
@@ -184,6 +188,26 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
     setPage(1);
   };
 
+  const handleAnularConfirm = async (motivo: AnulacionMotivo) => {
+    if (!anularTarget || !selectedProductionId) return;
+    setAnulando(true);
+    try {
+      await anularReoperacionesPlaca({
+        produccion_id: selectedProductionId,
+        placa_id: anularTarget.placaId!,
+        motivo,
+        operador: displayName,
+        usuario: session?.user.email ?? '',
+      });
+      setAnularTarget(null);
+      await reload();
+    } catch (err) {
+      throw err;
+    } finally {
+      setAnulando(false);
+    }
+  };
+
   const handleCierreConfirm = async (motivo: string, tipoRecuperacion: string) => {
     if (!cierreTarget || !selectedProductionId) return;
     setClosing(true);
@@ -228,20 +252,36 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
     ...(canOperate
       ? [{
           header: 'Acción',
-          cell: (row: ReoperationRow) =>
-            row.estado === 'pendiente' ? (
-              <button
-                type="button"
-                onClick={() => setCierreTarget(row)}
-                disabled={closing}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:bg-success disabled:opacity-50"
-              >
-                <ShieldCheck className="h-3 w-3" />
-                Marcar como recuperada
-              </button>
-            ) : (
-              <span className="text-xs text-muted-foreground">—</span>
-            ),
+          cell: (row: ReoperationRow) => (
+            <div className="flex items-center gap-2">
+              {row.estado === 'pendiente' && (
+                <button
+                  type="button"
+                  onClick={() => setCierreTarget(row)}
+                  disabled={closing || anulando}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-success px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:bg-success disabled:opacity-50"
+                >
+                  <ShieldCheck className="h-3 w-3" />
+                  Marcar como recuperada
+                </button>
+              )}
+              {row.placaId && row.estado === 'pendiente' && (
+                <button
+                  type="button"
+                  onClick={() => setAnularTarget(row)}
+                  disabled={closing || anulando}
+                  title="Quitar reoperación por error"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 bg-card px-3 py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/10 disabled:opacity-50"
+                >
+                  <Undo2 className="h-3 w-3" />
+                  Quitar
+                </button>
+              )}
+              {row.estado !== 'pendiente' && (!row.placaId || row.estado !== 'pendiente') && (
+                <span className="text-xs text-muted-foreground">—</span>
+              )}
+            </div>
+          ),
         }]
       : []),
   ];
@@ -358,6 +398,18 @@ export function ReoperationsPage({ onNavigate }: ScreenProps) {
           placa={null}
           onClose={() => setCierreTarget(null)}
           onConfirm={handleCierreConfirm}
+        />
+      )}
+
+      {anularTarget && (
+        <AnularReoperacionModal
+          reoperacion={anularTarget.reoperacion}
+          serie={anularTarget.serie}
+          posicion={anularTarget.posicion}
+          servicio={anularTarget.servicio}
+          caja={anularTarget.caja}
+          onClose={() => setAnularTarget(null)}
+          onConfirm={handleAnularConfirm}
         />
       )}
     </div>

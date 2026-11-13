@@ -89,6 +89,21 @@ export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegiste
 
         {p && mode === 'info' && (
           <>
+            {info.reopsCount > 0 && (
+              <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="font-semibold">Esta placa ya tiene {info.reopsCount} reoperación(es) registrada(s).</p>
+                  <p className="mt-0.5 text-xs">
+                    {info.recuperacionesCount > 0
+                      ? 'La placa ya fue recuperada. Verifica que no estés registrando una reoperación duplicada.'
+                      : info.hasPendingReoperation
+                        ? 'La placa tiene reoperación pendiente. Verifica que no estés registrando una reoperación duplicada antes de continuar.'
+                        : 'Verifica que no estés registrando una reoperación duplicada antes de continuar.'}
+                  </p>
+                </div>
+              </div>
+            )}
             <dl className="divide-y divide-border rounded-lg border border-border text-sm">
               <InfoRow label="Serie" value={<span className="font-mono">{p.serie}</span>} />
               <InfoRow label="Posición" value={p.posicion} />
@@ -96,7 +111,7 @@ export function PlacaInfoModal({ info, onClose, onRegisterReoperation, onRegiste
               <InfoRow label="Caja" value={p.numero_caja} />
               <InfoRow label="Consecutivo" value={String(p.consecutivo)} />
               <InfoRow label="Estado" value={p.activo ? 'Activa' : 'Inactiva'} />
-              <InfoRow label="Reoperaciones anteriores" value={String(info.reopsCount)} />
+              <InfoRow label="Reoperaciones anteriores" value={<span className={info.reopsCount > 0 ? 'text-destructive font-bold' : ''}>{info.reopsCount}</span>} />
               <InfoRow label="Recuperaciones anteriores" value={String(info.recuperacionesCount)} />
             </dl>
 
