@@ -327,9 +327,9 @@ export function ActiveAnalyticsPage() {
       {totals && (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 2xl:grid-cols-4">
           <KpiCard icon={Layers} label="Producciones seleccionadas" value={productionCount} tone="navy" hint="Producciones incluidas en este análisis." />
-          <KpiCard icon={RotateCcw} label="Registros de reoperación" value={totals.totalReoperaciones} tone="amber" hint="Cada vez que una placa fue enviada a reoperar." />
+          <KpiCard visible = {false} icon={RotateCcw} label="Registros de reoperación" value={totals.totalReoperaciones} tone="amber" hint="Cada vez que una placa fue enviada a reoperar." />
           <KpiCard icon={AlertCircle} label="Placas pendientes" value={totals.placasConPendientes} tone="red" hint="Placas con una reoperación sin resolver. Cada placa cuenta una vez." />
-          <KpiCard icon={CheckCircle2} label="Recuperaciones" value={totals.totalRecuperaciones} tone="emerald" hint="Recuperaciones registradas." />
+          <KpiCard visible= {false} icon={CheckCircle2} label="Recuperaciones" value={totals.totalRecuperaciones} tone="emerald" hint="Recuperaciones registradas." />
           <KpiCard icon={Users} label="Placas reoperadas" value={totals.placasAfectadas} tone="navy" hint="Placas distintas con al menos una reoperación, incluidas las recuperadas." />
           <KpiCard icon={Percent} label="Placas reoperadas del total" value={formatPercent(totals.porcentajePlacasAfectadas)} tone="amber" hint={`${totals.placasAfectadas} de ${totals.totalPlacas} placas de las producciones seleccionadas`} />
           <KpiCard icon={Package} label="Cajas pendientes" value={totals.cajasPendientes} tone="red" hint="Cajas con alguna reoperación sin resolver." />
