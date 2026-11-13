@@ -189,7 +189,6 @@ export function BoxClosePanel({ produccionId, operador = '', usuario = '', open,
     setRecoveryBusy(true);
     setRecoveryError(null);
     const selectedPlacas = recoveryPlacas.filter((p) => recoverySelected.has(p.id));
-    const selectedIds = new Set(selectedPlacas.map((p) => p.id));
     const recupInputs: RecuperacionInput[] = selectedPlacas.map((p) => ({
       produccion_id: produccionId,
       placa_id: p.id,
