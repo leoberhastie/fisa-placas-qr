@@ -4,15 +4,18 @@
 
 ## 1. Problema detectado
 
-En tres producciones se observó que el número de recuperaciones superaba al de reoperaciones, lo cual es ilógico: para que exista una recuperación, primero debió existir una reoperación pendiente.
+En cuatro producciones se observó que el número de recuperaciones superaba al de reoperaciones, lo cual es ilógico: para que exista una recuperación, primero debió existir una reoperación pendiente.
 
 | Producción | Reoperaciones | Recuperaciones | Diferencia |
 |---|---|---|---|
 | PRIV_ANTIGUO (`29f63455...`) | 22 | 36 | +14 |
 | PRIV AUTOMOVIL (`4a42808f...`) | 955 | 951 | -4 (normal) |
 | Camiones Priv (`5a3f7578...`) | 2414 | 2394 | -20 (normal) |
+| MOTO2 (`20f9eb0e...`) | 134* | 269* | +135 |
 
-Solo PRIV_ANTIGUO presentaba el problema: 14 recuperaciones duplicadas.
+Solo PRIV_ANTIGUO (14 duplicados) y MOTO2 (134 duplicados) presentaban el problema. PRIV AUTOMOVIL y Camiones Priv no tenían duplicados.
+
+(* Valores antes de la corrección. MOTO2 tiene además 1 reoperación anulada que justifica 1 recuperación adicional legítima.)
 
 ## 2. Análisis de la IA externa vs. realidad
 
@@ -62,23 +65,37 @@ El primer intento insertó la recuperación (paso 1 exitoso) pero falló el hist
 
 ## 4. Corrección de datos
 
-### Migración aplicada
+### Migraciones aplicadas
 
-Se ejecutó la migración `delete_duplicate_recuperaciones_priv_antiguo.sql` que:
+Se ejecutaron dos migraciones:
 
-1. Identificó las 14 placas con más recuperaciones que reoperaciones
+**Migración 1: `delete_duplicate_recuperaciones_priv_antiguo.sql`** — 14 registros eliminados
+
+1. Identificó las 14 placas de PRIV_ANTIGUO con más recuperaciones que reoperaciones
 2. Para cada placa, identificó el registro de recuperación que **no tenía entrada correspondiente en el historial**
 3. Eliminó solo esos 14 registros duplicados (el primer registro de cada par)
 
-### Consulta de identificación de duplicados
+**Migración 2: `delete_duplicate_recuperaciones_moto2.sql`** — 134 registros eliminados
+
+1. Identificó 134 placas de MOTO2 con más recuperaciones que reoperaciones + reoperaciones anuladas
+2. Se ajustó la consulta para considerar reoperaciones anuladas: una placa con 1 reoperación + 1 anulada puede tener 2 recuperaciones legítimas
+3. Excluyó correctamente la placa LT3Z2H (1 reoperación + 1 anulada = 2 recuperaciones legítimas)
+4. Eliminó los 134 registros duplicados sin entrada en el historial
+
+### Consulta de identificación de duplicados (versión final con reoperaciones anuladas)
 
 ```sql
 WITH placas_duplicadas AS (
   SELECT pl.id AS placa_id
   FROM placas pl
-  WHERE pl.produccion_id = '29f63455-903c-49b0-b730-83bb1f01d71a'
+  WHERE pl.produccion_id IN (
+    '4a42808f-45da-40d4-ad44-eae50b548407',
+    '5a3f7578-b169-48fb-937c-9457097314c9',
+    '20f9eb0e-1c5d-4259-bc27-ad7dbc3c58e8'
+  )
     AND (SELECT COUNT(*) FROM recuperaciones rc WHERE rc.placa_id = pl.id)
-      > (SELECT COUNT(*) FROM reoperaciones r WHERE r.placa_id = pl.id)
+      > ((SELECT COUNT(*) FROM reoperaciones r WHERE r.placa_id = pl.id)
+       + (SELECT COUNT(*) FROM reoperaciones_anuladas ra WHERE ra.placa_id = pl.id))
 ),
 duplicados_a_eliminar AS (
   SELECT rc.id
@@ -103,8 +120,11 @@ WHERE id IN (SELECT id FROM duplicados_a_eliminar);
 | PRIV_ANTIGUO | 22 | 22 | Corregido |
 | PRIV AUTOMOVIL | 955 | 951 | Sin cambios (normal) |
 | Camiones Priv | 2414 | 2394 | Sin cambios (normal) |
+| MOTO2 | 134 + 1 anulada | 135 | Corregido |
 
-Todas las placas de PRIV_ANTIGUO ahora tienen 1 reoperación, 1 recuperación y 1 entrada de historial. Las reoperaciones anuladas (2 en Camiones Priv) explican la diferencia de 20 en esa producción, y es comportamiento esperado.
+Todas las placas ahora tienen recuperaciones <= reoperaciones + reoperaciones anuladas. Cero placas con excedente en las cuatro producciones.
+
+PRIV AUTOMOVIL y Camiones Priv no tenían duplicados. La diferencia negativa en estas producciones se explica por reoperaciones anuladas y es comportamiento esperado.
 
 ## 5. Corrección de código (prevención)
 
@@ -160,10 +180,13 @@ Si las recuperaciones no se insertaron (error de red, permisos, etc.), el usuari
 
 ## 6. Migraciones aplicadas
 
-| Migración | Propósito |
-|---|---|
-| `20261113141451_delete_duplicate_recuperaciones_priv_antiguo.sql` | Eliminar 14 recuperaciones duplicadas |
+| Migración | Producción | Registros eliminados |
+|---|---|---|
+| `20261113141451_delete_duplicate_recuperaciones_priv_antiguo.sql` | PRIV_ANTIGUO | 14 |
+| `2026111314xxxxx_delete_duplicate_recuperaciones_moto2.sql` | MOTO2 | 134 |
+
+**Total: 148 recuperaciones duplicadas eliminadas.**
 
 ## 7. Conclusión
 
-El problema fue causado por un manejo incorrecto de errores parciales en el flujo de recuperación desde el cierre de caja. Cuando la inserción de recuperaciones tenía éxito pero la del historial fallaba, el operador podía reintentar, creando duplicados. La corrección de código previene esto con tres mecanismos: guard de re-entrada, limpieza inmediata de selección, y manejo diferenciado de error parcial vs. error total.
+El problema fue causado por un manejo incorrecto de errores parciales en el flujo de recuperación desde el cierre de caja. Cuando la inserción de recuperaciones tenía éxito pero la del historial fallaba, el operador podía reintentar, creando duplicados. Se eliminaron 148 recuperaciones duplicadas en total (14 en PRIV_ANTIGUO y 134 en MOTO2). La corrección de código previene esto con tres mecanismos: guard de re-entrada, limpieza inmediata de selección, y manejo diferenciado de error parcial vs. error total.
