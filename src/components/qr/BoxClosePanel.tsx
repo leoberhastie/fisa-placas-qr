@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
@@ -182,44 +182,64 @@ export function BoxClosePanel({ produccionId, operador = '', usuario = '', open,
     setRecoverySelected(new Set());
   }, []);
 
+  const recoverySubmitRef = useRef(false);
   const handleConfirmRecovery = useCallback(async () => {
-    if (!recoveryBox || recoverySelected.size === 0) return;
+    if (!recoveryBox || recoverySelected.size === 0 || recoverySubmitRef.current) return;
+    recoverySubmitRef.current = true;
     setRecoveryBusy(true);
     setRecoveryError(null);
+    const selectedPlacas = recoveryPlacas.filter((p) => recoverySelected.has(p.id));
+    const selectedIds = new Set(selectedPlacas.map((p) => p.id));
+    const recupInputs: RecuperacionInput[] = selectedPlacas.map((p) => ({
+      produccion_id: produccionId,
+      placa_id: p.id,
+      operador,
+      usuario,
+      tipo_recuperacion: RECUPERACION_TIPO,
+      observaciones: '',
+    }));
+    const histInputs: HistorialInput[] = selectedPlacas.map((p) => ({
+      produccion_id: produccionId,
+      placa_id: p.id,
+      tipo_operacion: 'recuperacion',
+      proceso: '',
+      operador,
+      usuario,
+      estado_anterior: 'pendiente',
+      estado_nuevo: 'completo',
+      observaciones: RECUPERACION_TIPO,
+    }));
+    let recupDone = false;
     try {
-      const selectedPlacas = recoveryPlacas.filter((p) => recoverySelected.has(p.id));
-      const recupInputs: RecuperacionInput[] = selectedPlacas.map((p) => ({
-        produccion_id: produccionId,
-        placa_id: p.id,
-        operador,
-        usuario,
-        tipo_recuperacion: RECUPERACION_TIPO,
-        observaciones: '',
-      }));
-      const histInputs: HistorialInput[] = selectedPlacas.map((p) => ({
-        produccion_id: produccionId,
-        placa_id: p.id,
-        tipo_operacion: 'recuperacion',
-        proceso: '',
-        operador,
-        usuario,
-        estado_anterior: 'pendiente',
-        estado_nuevo: 'completo',
-        observaciones: RECUPERACION_TIPO,
-      }));
       await createRecuperacionesBatch(recupInputs);
+      recupDone = true;
+      // Clear selection immediately after recuperaciones are inserted — even if
+      // historial fails, the trigger already marked reoperaciones as complete,
+      // so these placas must not be recoverable again.
+      setRecoverySelected(new Set());
       await insertHistorialBatch(histInputs);
       setConfirmRecovery(false);
       setRecoveryBox(null);
       setRecoveryPlacas([]);
-      setRecoverySelected(new Set());
       await refreshBoxes();
       onCompleted();
     } catch (err) {
-      setRecoveryError(err instanceof Error ? err.message : 'No se pudieron recuperar las placas.');
-      setConfirmRecovery(false);
+      if (recupDone) {
+        // Recuperaciones were inserted but historial failed — don't let the user
+        // retry the same placas; the data is already saved in the database.
+        setRecoveryError('Las recuperaciones se registraron pero el historial tuvo un error. Las placas ya fueron recuperadas.');
+        setConfirmRecovery(false);
+        setRecoveryBox(null);
+        setRecoveryPlacas([]);
+        void refreshBoxes();
+        void onCompleted();
+      } else {
+        setRecoveryError(err instanceof Error ? err.message : 'No se pudieron recuperar las placas.');
+        setConfirmRecovery(false);
+      }
     } finally {
       setRecoveryBusy(false);
+      recoverySubmitRef.current = false;
     }
   }, [recoveryBox, recoverySelected, recoveryPlacas, produccionId, operador, usuario, refreshBoxes, onCompleted]);
 
