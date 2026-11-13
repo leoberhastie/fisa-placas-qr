@@ -12,12 +12,12 @@ export interface ActiveProductionRef {
 export async function fetchActiveProductionRefs(): Promise<ActiveProductionRef[]> {
   const { data, error } = await supabase
     .from('productions')
-    .select('id, consecutivo, estado, anio, version_datos')
+    .select('id, consecutivo, estado, anio, version_datos, description')
     .eq('status', 'activa')
     .order('anio', { ascending: true })
     .order('consecutivo', { ascending: true });
   if (error || !Array.isArray(data)) throw new Error('No se pudieron cargar las producciones activas.');
-  return data.map((row: { id: string; consecutivo: number; estado: string; anio: number; version_datos: number }) => ({
+  return data.map((row: { id: string; consecutivo: number; estado: string; anio: number; version_datos: number, description: string}) => ({
     id: row.id,
     label: productionDisplayLabel(row),
     versionDatos: row.version_datos,
@@ -32,16 +32,17 @@ export interface AnalyticsProductionOption {
   estado: string;
   anio: number;
   versionDatos: number;
+  description: string;
 }
 
 export async function fetchAllProductionOptions(): Promise<AnalyticsProductionOption[]> {
   const { data, error } = await supabase
     .from('productions')
-    .select('id, consecutivo, estado, anio, status, version_datos')
+    .select('id, consecutivo, estado, anio, status, version_datos, description')
     .order('anio', { ascending: true })
     .order('consecutivo', { ascending: true });
   if (error || !Array.isArray(data)) throw new Error('No se pudieron cargar las producciones.');
-  return data.map((row: { id: string; consecutivo: number; estado: string; anio: number; status: string; version_datos: number }) => ({
+  return data.map((row: { id: string; consecutivo: number; estado: string; anio: number; status: string; version_datos: number; description: string }) => ({
     id: row.id,
     label: productionDisplayLabel(row),
     status: row.status,
@@ -49,6 +50,7 @@ export async function fetchAllProductionOptions(): Promise<AnalyticsProductionOp
     estado: row.estado,
     anio: row.anio,
     versionDatos: row.version_datos,
+    description: row.description,
   }));
 }
 
@@ -56,12 +58,12 @@ export async function fetchProductionRefsByIds(ids: string[]): Promise<ActivePro
   if (ids.length === 0) return [];
   const { data, error } = await supabase
     .from('productions')
-    .select('id, consecutivo, estado, anio, version_datos')
+    .select('id, consecutivo, estado, anio, version_datos, description')
     .in('id', ids)
     .order('anio', { ascending: true })
     .order('consecutivo', { ascending: true });
   if (error || !Array.isArray(data)) throw new Error('No se pudieron cargar las producciones seleccionadas.');
-  return data.map((row: { id: string; consecutivo: number; estado: string; anio: number; version_datos: number }) => ({
+  return data.map((row: { id: string; consecutivo: number; estado: string; anio: number; version_datos: number; description: string }) => ({
     id: row.id,
     label: productionDisplayLabel(row),
     versionDatos: row.version_datos,
