@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDataSyncActions, useProductionVersions } from '@/context/DataSyncContext';
 import { aggregateActiveProductions, type ActiveAnalytics } from '@/lib/activeAnalytics';
-import { fetchActiveProductionRefs, fetchActiveProductionSnapshots, type ActiveProductionRef } from '@/services/analyticsService';
+import {
+  fetchProductionRefsByIds,
+  fetchActiveProductionRefs,
+  fetchActiveProductionSnapshots,
+  type ActiveProductionRef,
+} from '@/services/analyticsService';
 
 interface AnalyticsState {
   data: ActiveAnalytics | null;
@@ -13,21 +18,36 @@ interface AnalyticsState {
 const INITIAL_STATE: AnalyticsState = { data: null, loadedVersions: null, loading: true, error: null };
 
 function cacheKeyFor(refs: ActiveProductionRef[]): string {
-  return `analytics:activas:${refs.map((ref) => ref.id).sort().join(',')}`;
+  return `analytics:selected:${refs.map((ref) => ref.id).sort().join(',')}`;
 }
 
-export function useActiveProductionsAnalytics() {
+export function useActiveProductionsAnalytics(selectedIds: string[] | null) {
   const { readCache, writeCache } = useDataSyncActions();
   const liveVersions = useProductionVersions();
   const [state, setState] = useState<AnalyticsState>(INITIAL_STATE);
   const requestIdRef = useRef(0);
 
+  const selectedKey = selectedIds ? selectedIds.slice().sort().join(',') : null;
+
   const load = useCallback(
-    async (force: boolean) => {
+    async (force: boolean, ids: string[] | null) => {
       const requestId = ++requestIdRef.current;
       setState((previous) => ({ ...previous, loading: true, error: null }));
       try {
-        const refs = await fetchActiveProductionRefs();
+        let refs: ActiveProductionRef[];
+        if (ids && ids.length > 0) {
+          refs = await fetchProductionRefsByIds(ids);
+        } else {
+          refs = await fetchActiveProductionRefs();
+        }
+
+        if (refs.length === 0) {
+          if (requestId === requestIdRef.current) {
+            setState({ data: null, loadedVersions: {}, loading: false, error: null });
+          }
+          return;
+        }
+
         const loadedVersions = Object.fromEntries(refs.map((ref) => [ref.id, ref.versionDatos]));
         const version = refs.reduce((acc, ref) => acc + ref.versionDatos, 0);
         const key = cacheKeyFor(refs);
@@ -58,8 +78,9 @@ export function useActiveProductionsAnalytics() {
   );
 
   useEffect(() => {
-    void load(false);
-  }, [load]);
+    void load(false, selectedIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedKey]);
 
   const hasNewData =
     state.loadedVersions !== null &&
@@ -70,6 +91,6 @@ export function useActiveProductionsAnalytics() {
     loading: state.loading,
     error: state.error,
     hasNewData,
-    reload: () => load(true),
+    reload: () => load(true, selectedIds),
   };
 }

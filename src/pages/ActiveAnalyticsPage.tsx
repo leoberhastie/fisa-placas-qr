@@ -1,6 +1,7 @@
-import { AlertCircle, CheckCircle2, Layers, Loader2, Package, Percent, RotateCcw, Users } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Layers, Loader2, Package, Percent, RotateCcw, Settings2, Users } from 'lucide-react';
 import { useState } from 'react';
 import { AnalyticsUpdateAlert } from '@/components/analytics/AnalyticsUpdateAlert';
+import { AnalyticsProductionSelectorModal } from '@/components/analytics/AnalyticsProductionSelectorModal';
 import { ExportMenu } from '@/components/export/ExportMenu';
 import { OperationStatusBadge, BOX_STATUS_LABELS } from '@/components/metrics/OperationStatusBadge';
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable';
@@ -10,6 +11,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { HorizontalBars } from '@/components/reports/HorizontalBars';
 import { ReportSection } from '@/components/reports/ReportSection';
 import { useAuth } from '@/context/AuthContext';
+import { useAnalyticsSelection } from '@/context/AnalyticsSelectionContext';
 import { useActiveProductionsAnalytics } from '@/hooks/useActiveProductionsAnalytics';
 import type { ComparisonRow, EstadoCajaGlobal, ProcesoDistribucionRow } from '@/lib/activeAnalytics';
 import { exportExcel, exportPdf, type ExportChart, type ExportColumn, type ExportMeta } from '@/lib/exportFiles';
@@ -96,8 +98,10 @@ const TABLE_EMPTY = { emptyTitle: 'Sin registros', emptyDescription: 'No hay dat
 
 export function ActiveAnalyticsPage() {
   const { profile, session } = useAuth();
-  const { data, loading, error, hasNewData, reload } = useActiveProductionsAnalytics();
+  const { selectedIds, setSelectedIds, selectionVersion, isResolved } = useAnalyticsSelection();
+  const { data, loading, error, hasNewData, reload } = useActiveProductionsAnalytics(selectedIds);
   const [cajasPage, setCajasPage] = useState(1);
+  const [selectorOpen, setSelectorOpen] = useState(false);
 
   const totals = data?.totals ?? null;
   const productionCount = data?.productionCount ?? 0;
@@ -116,7 +120,8 @@ export function ActiveAnalyticsPage() {
   const cajasPageRows = cajas.slice((cajasCurrentPage - 1) * CAJAS_PAGE_SIZE, cajasCurrentPage * CAJAS_PAGE_SIZE);
 
   const usuario = profile?.full_name ?? session?.user.email ?? '—';
-  const produccionLabel = `Análisis global · ${productionCount} ${productionCount === 1 ? 'producción activa' : 'producciones activas'}`;
+  const selectedCount = selectedIds?.length ?? 0;
+  const produccionLabel = `Análisis global · ${selectedCount} ${selectedCount === 1 ? 'producción seleccionada' : 'producciones seleccionadas'}`;
 
   const buildMeta = (title: string, fileBase: string, charts?: ExportChart[]): ExportMeta => ({
     title,
@@ -231,13 +236,66 @@ export function ActiveAnalyticsPage() {
 
   const hasMovement = totals !== null && totals.totalReoperaciones + totals.totalRecuperaciones > 0;
 
+  const handleSelectorConfirm = (ids: string[]) => {
+    setSelectedIds(ids);
+    setSelectorOpen(false);
+  };
+
+  // Show the selector modal on first visit when no selection has been made yet
+  const showInitialSelector = isResolved && selectedIds === null;
+
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Análisis"
         title="Análisis global"
-        description="Métricas combinadas de todas las producciones activas. Las producciones archivadas no se incluyen."
+        description="Métricas combinadas de las producciones que selecciones. Puedes incluir activas, finalizadas y archivadas."
+        actions={
+          <button
+            type="button"
+            onClick={() => setSelectorOpen(true)}
+            className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground/80 transition hover:bg-muted/50"
+          >
+            <Settings2 className="h-4 w-4" />
+            Cambiar producciones
+            {selectedCount > 0 && (
+              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent">{selectedCount}</span>
+            )}
+          </button>
+        }
       />
+
+      {showInitialSelector && (
+        <AnalyticsProductionSelectorModal
+          open={true}
+          initiallySelectedIds={[]}
+          onConfirm={handleSelectorConfirm}
+          onClose={() => {
+            // If user closes without selecting, default to active productions
+            setSelectedIds([]);
+          }}
+        />
+      )}
+
+      {selectorOpen && (
+        <AnalyticsProductionSelectorModal
+          open={true}
+          initiallySelectedIds={selectedIds ?? []}
+          onConfirm={handleSelectorConfirm}
+          onClose={() => setSelectorOpen(false)}
+        />
+      )}
+
+      {/* Selection summary banner */}
+      {selectedIds !== null && selectedIds.length > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+          <Layers className="h-5 w-5 shrink-0 text-accent" />
+          <p className="text-sm text-muted-foreground">
+            Analizando <span className="font-semibold text-foreground">{selectedCount}</span> {selectedCount === 1 ? 'producción' : 'producciones'}.
+            {' '}Las producciones archivadas no afectan al sistema de órdenes activas.
+          </p>
+        </div>
+      )}
 
       <AnalyticsUpdateAlert visible={hasNewData} onRefresh={() => void reload()} />
 
@@ -250,37 +308,37 @@ export function ActiveAnalyticsPage() {
       {loading && !data && (
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-10 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          Cargando análisis de producciones activas...
+          Cargando análisis...
         </div>
       )}
 
       {!loading && data && productionCount === 0 && (
         <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-10 text-center text-sm text-muted-foreground">
-          No hay producciones activas. Las producciones archivadas no se incluyen en este análisis.
+          No hay producciones seleccionadas. Usa el botón "Cambiar producciones" para elegir qué analizar.
         </div>
       )}
 
       {!loading && data && productionCount > 0 && !hasMovement && (
         <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-10 text-center text-sm text-muted-foreground">
-          Aún no hay reoperaciones ni recuperaciones registradas en las producciones activas.
+          Aún no hay reoperaciones ni recuperaciones registradas en las producciones seleccionadas.
         </div>
       )}
 
       {totals && (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 2xl:grid-cols-4">
-          <KpiCard icon={Layers} label="Producciones activas" value={productionCount} tone="navy" hint="Producciones no archivadas incluidas en este análisis." />
+          <KpiCard icon={Layers} label="Producciones seleccionadas" value={productionCount} tone="navy" hint="Producciones incluidas en este análisis." />
           <KpiCard icon={RotateCcw} label="Registros de reoperación" value={totals.totalReoperaciones} tone="amber" hint="Cada vez que una placa fue enviada a reoperar." />
           <KpiCard icon={AlertCircle} label="Placas pendientes" value={totals.placasConPendientes} tone="red" hint="Placas con una reoperación sin resolver. Cada placa cuenta una vez." />
           <KpiCard icon={CheckCircle2} label="Recuperaciones" value={totals.totalRecuperaciones} tone="emerald" hint="Recuperaciones registradas." />
           <KpiCard icon={Users} label="Placas reoperadas" value={totals.placasAfectadas} tone="navy" hint="Placas distintas con al menos una reoperación, incluidas las recuperadas." />
-          <KpiCard icon={Percent} label="Placas reoperadas del total" value={formatPercent(totals.porcentajePlacasAfectadas)} tone="amber" hint={`${totals.placasAfectadas} de ${totals.totalPlacas} placas de las producciones activas`} />
+          <KpiCard icon={Percent} label="Placas reoperadas del total" value={formatPercent(totals.porcentajePlacasAfectadas)} tone="amber" hint={`${totals.placasAfectadas} de ${totals.totalPlacas} placas de las producciones seleccionadas`} />
           <KpiCard icon={Package} label="Cajas pendientes" value={totals.cajasPendientes} tone="red" hint="Cajas con alguna reoperación sin resolver." />
         </div>
       )}
 
       <ReportSection
         title="Comparativa entre producciones"
-        description="Cómo se diferencian las producciones activas en reoperaciones, recuperaciones y pendientes."
+        description="Cómo se diferencian las producciones seleccionadas en reoperaciones, recuperaciones y pendientes."
         actions={exportMenu(
           'Comparativa entre producciones',
           'comparativa-producciones',
@@ -302,7 +360,7 @@ export function ActiveAnalyticsPage() {
 
       <ReportSection
         title="Porcentaje de reoperaciones por producción"
-        description="Reoperaciones de cada producción frente a las placas con reoperación de todas las producciones activas, que equivalen al 100%."
+        description="Reoperaciones de cada producción frente a las placas con reoperación de todas las producciones seleccionadas, que equivalen al 100%."
         actions={exportMenu(
           'Porcentaje de reoperaciones por producción',
           'porcentaje-reoperaciones-producciones',
@@ -316,17 +374,17 @@ export function ActiveAnalyticsPage() {
             items={porcentajeProduccionItems}
             maxValue={porcentajeProduccionMax}
             formatValue={formatPercent}
-            emptyText="Sin producciones activas para graficar."
+            emptyText="Sin producciones seleccionadas para graficar."
           />
         </div>
       </ReportSection>
 
       <ReportSection
         title="Defectos principales por servicio"
-        description="Todas las producciones activas agrupadas por servicio. El porcentaje de defectos compara los registros de reoperación contra las placas totales del servicio. Las placas pendientes y recuperadas cuentan placas únicas."
+        description="Todas las producciones seleccionadas agrupadas por servicio. El porcentaje de defectos compara los registros de reoperación contra las placas totales del servicio. Las placas pendientes y recuperadas cuentan placas únicas."
         actions={exportMenu(
           'Defectos principales por servicio',
-          'defectos-principales-servicio-activas',
+          'defectos-principales-servicio-seleccionadas',
           SERVICIO_ANALISIS_COLUMNS,
           servicioAnalisisRows,
           [{ title: '% de defectos por servicio', items: servicioDefectosItems }],
@@ -334,7 +392,7 @@ export function ActiveAnalyticsPage() {
       >
         <div className="mb-6 rounded-xl border border-border bg-muted/50 p-4 sm:p-5">
           <h3 className="mb-4 text-sm font-semibold text-primary">Porcentaje de defectos por servicio</h3>
-          <HorizontalBars items={servicioDefectosItems} maxValue={servicioDefectosMax} formatValue={formatPercent} emptyText="Sin servicios activos para graficar." />
+          <HorizontalBars items={servicioDefectosItems} maxValue={servicioDefectosMax} formatValue={formatPercent} emptyText="Sin servicios para graficar." />
         </div>
         <DataTable columns={servicioAnalisisColumns} rows={servicioAnalisisRows} getRowKey={(r) => r.servicio} {...TABLE_EMPTY} />
       </ReportSection>
@@ -358,10 +416,10 @@ export function ActiveAnalyticsPage() {
 
       <ReportSection
         title="Resumen general por servicio"
-        description="Cajas, placas, reoperaciones, recuperadas, pendientes y participación de cada servicio, sumadas entre producciones activas."
+        description="Cajas, placas, reoperaciones, recuperadas, pendientes y participación de cada servicio, sumadas entre las producciones seleccionadas."
         actions={exportMenu(
           'Resumen general por servicio',
-          'resumen-general-servicios-activas',
+          'resumen-general-servicios-seleccionadas',
           SERVICIO_COLUMNS,
           servicios,
           [{ title: 'Reoperaciones por servicio', items: servicios.map((r) => ({ label: r.servicio, value: r.reoperaciones })) }],
@@ -377,7 +435,7 @@ export function ActiveAnalyticsPage() {
       <ReportSection
         title="Reoperaciones por servicio y proceso"
         description="Cantidad de reoperaciones y pendientes para cada combinación de servicio y proceso."
-        actions={exportMenu('Reoperaciones por servicio y proceso', 'reop-servicio-proceso-activas', REOP_PROCESO_COLUMNS, reopProceso)}
+        actions={exportMenu('Reoperaciones por servicio y proceso', 'reop-servicio-proceso-seleccionadas', REOP_PROCESO_COLUMNS, reopProceso)}
       >
         <DataTable columns={reopProcesoColumns} rows={reopProceso} getRowKey={(r) => `${r.servicio}-${r.proceso}`} {...TABLE_EMPTY} />
       </ReportSection>
@@ -387,7 +445,7 @@ export function ActiveAnalyticsPage() {
         description="Recuperaciones registradas por servicio, separando las manuales de las normales."
         actions={exportMenu(
           'Recuperaciones por servicio',
-          'recuperaciones-servicio-activas',
+          'recuperaciones-servicio-seleccionadas',
           RECUP_SERVICIO_COLUMNS,
           recupServicio,
           [{ title: 'Recuperaciones por servicio', items: recupServicio.map((r) => ({ label: r.servicio, value: r.total })) }],
@@ -399,8 +457,8 @@ export function ActiveAnalyticsPage() {
 
       <ReportSection
         title="Estado de cajas"
-        description="Cajas con reoperaciones de todas las producciones activas, indicando si están pendientes o completas."
-        actions={exportMenu('Estado de cajas', 'estado-cajas-activas', CAJA_COLUMNS, cajas)}
+        description="Cajas con reoperaciones de todas las producciones seleccionadas, indicando si están pendientes o completas."
+        actions={exportMenu('Estado de cajas', 'estado-cajas-seleccionadas', CAJA_COLUMNS, cajas)}
       >
         <Pagination
           page={cajasCurrentPage}
@@ -418,8 +476,8 @@ export function ActiveAnalyticsPage() {
 
       <ReportSection
         title="Evolución por fecha"
-        description="Reoperaciones y recuperaciones registradas cada día en todas las producciones activas."
-        actions={exportMenu('Evolución por fecha', 'evolucion-fecha-activas', EVOLUCION_COLUMNS, evolucion)}
+        description="Reoperaciones y recuperaciones registradas cada día en todas las producciones seleccionadas."
+        actions={exportMenu('Evolución por fecha', 'evolucion-fecha-seleccionadas', EVOLUCION_COLUMNS, evolucion)}
       >
         <DataTable columns={evolucionColumns} rows={evolucion} getRowKey={(r) => r.fecha} {...TABLE_EMPTY} />
       </ReportSection>

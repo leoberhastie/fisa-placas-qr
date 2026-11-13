@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProductionSelectionProvider } from '@/context/ProductionSelectionContext';
+import { AnalyticsSelectionProvider } from '@/context/AnalyticsSelectionContext';
 import { DataSyncProvider } from '@/context/DataSyncContext';
 import { AppErrorBoundary } from '@/components/ui/AppErrorBoundary';
 import './index.css';
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <DataSyncProvider>
           <ProductionSelectionProvider>
-            <App />
+            <AnalyticsSelectionProvider>
+              <App />
+            </AnalyticsSelectionProvider>
           </ProductionSelectionProvider>
         </DataSyncProvider>
       </AuthProvider>

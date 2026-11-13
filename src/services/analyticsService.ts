@@ -24,6 +24,50 @@ export async function fetchActiveProductionRefs(): Promise<ActiveProductionRef[]
   }));
 }
 
+export interface AnalyticsProductionOption {
+  id: string;
+  label: string;
+  status: string;
+  consecutivo: number;
+  estado: string;
+  anio: number;
+  versionDatos: number;
+}
+
+export async function fetchAllProductionOptions(): Promise<AnalyticsProductionOption[]> {
+  const { data, error } = await supabase
+    .from('productions')
+    .select('id, consecutivo, estado, anio, status, version_datos')
+    .order('anio', { ascending: true })
+    .order('consecutivo', { ascending: true });
+  if (error || !Array.isArray(data)) throw new Error('No se pudieron cargar las producciones.');
+  return data.map((row: { id: string; consecutivo: number; estado: string; anio: number; status: string; version_datos: number }) => ({
+    id: row.id,
+    label: productionDisplayLabel(row),
+    status: row.status,
+    consecutivo: row.consecutivo,
+    estado: row.estado,
+    anio: row.anio,
+    versionDatos: row.version_datos,
+  }));
+}
+
+export async function fetchProductionRefsByIds(ids: string[]): Promise<ActiveProductionRef[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from('productions')
+    .select('id, consecutivo, estado, anio, version_datos')
+    .in('id', ids)
+    .order('anio', { ascending: true })
+    .order('consecutivo', { ascending: true });
+  if (error || !Array.isArray(data)) throw new Error('No se pudieron cargar las producciones seleccionadas.');
+  return data.map((row: { id: string; consecutivo: number; estado: string; anio: number; version_datos: number }) => ({
+    id: row.id,
+    label: productionDisplayLabel(row),
+    versionDatos: row.version_datos,
+  }));
+}
+
 export async function fetchActiveProductionSnapshots(refs: ActiveProductionRef[]): Promise<ProductionSnapshot[]> {
   return Promise.all(
     refs.map(async (ref) => {
