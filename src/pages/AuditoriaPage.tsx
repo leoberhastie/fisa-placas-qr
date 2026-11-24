@@ -59,12 +59,11 @@ interface HistorialRow {
 const PAGE_SIZE = 15;
 
 export function AuditoriaPage({ onNavigate }: ScreenProps) {
-  const { profile, session } = useAuth();
-  const { selectedProductionId } = useProductionSelection();
+  const { profile } = useAuth();
+  const { selectedProductionId, operatorName } = useProductionSelection();
   const { productions } = useProductions();
   const selected = productions.find((item) => item.id === selectedProductionId) ?? null;
   const displayName = operatorName ?? profile?.full_name ?? profile?.email ?? '—';
-  const { operatorName } = useProductionSelection();
 
   const [file, setFile] = useState<File | null>(null);
   const [sheets, setSheets] = useState<SheetData[]>([]);
@@ -143,7 +142,7 @@ export function AuditoriaPage({ onNavigate }: ScreenProps) {
             setAvailableColumns(Object.keys(json[0]));
           }
           setSelectedSheet(workbook.SheetNames[0]);
-          storeWorkbook.current = workbook;
+          workbookRef.current = workbook;
         }
       } catch {
         setError('No se pudo leer el archivo Excel.');
@@ -153,11 +152,10 @@ export function AuditoriaPage({ onNavigate }: ScreenProps) {
   };
 
   const workbookRef = useRef<XLSX.WorkBook | null>(null);
-  const storeWorkbook = useRef(workbookRef);
 
   const handleSheetChange = (sheetName: string) => {
     setSelectedSheet(sheetName);
-    const wb = storeWorkbook.current;
+    const wb = workbookRef.current;
     if (!wb) return;
     const ws = wb.Sheets[sheetName];
     const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
@@ -176,7 +174,7 @@ export function AuditoriaPage({ onNavigate }: ScreenProps) {
     setProcessing(true);
     setError(null);
     try {
-      const wb = storeWorkbook.current;
+      const wb = workbookRef.current;
       if (!wb) throw new Error('Archivo no cargado.');
       const ws = wb.Sheets[selectedSheet];
       const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
