@@ -1,4 +1,12 @@
-import { AlertCircle, CheckCircle2, Package, RotateCcw, Users, Wrench } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Package,
+  RotateCcw,
+  ScanLine,
+  Users,
+  Wrench,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Pagination } from '@/components/ui/Pagination';
@@ -15,7 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useProductionSelection } from '@/context/ProductionSelectionContext';
 import { useProductionMetrics } from '@/hooks/useProductionMetrics';
 import { useHistoryData } from '@/hooks/useHistoryData';
-import { fetchReportData, fetchRepeatedReoperationPlates } from '@/services/metricsService';
+import { fetchReportData, fetchRepeatedReoperationPlates, type ProductionMetrics } from '@/services/metricsService';
 import { useVersionedData } from '@/hooks/useVersionedData';
 import { useProductions } from '@/hooks/useProductions';
 import { exportExcel, exportPdf, type ExportChart, type ExportColumn, type ExportMeta } from '@/lib/exportFiles';
@@ -88,6 +96,18 @@ const OPERADOR_COLUMNS: ExportColumn<RecupOperadorRow>[] = [
   { header: 'Manuales', value: (r) => r.manuales },
 ];
 
+const AVANCE_REAL_COLUMNS: ExportColumn<ProductionMetrics>[] = [
+  { header: 'Total de placas', value: (r) => r.totalPlacas },
+  { header: 'Placas completadas via QR', value: (r) => r.placasCompletadas },
+  { header: 'Placas faltantes por completar', value: (r) => r.placasFaltantesCompletar },
+  { header: 'Avance real (%)', value: (r) => formatPercent(r.porcentajeAvanceReal) },
+  { header: 'Enviadas a reoperar (histórico)', value: (r) => r.totalReoperaciones },
+  { header: 'Pendientes a reoperación', value: (r) => r.reoperacionesPendientes },
+  { header: 'Recuperadas', value: (r) => r.totalRecuperaciones },
+  { header: 'Recuperadas via Completado QR', value: (r) => r.reoperacionesRecuperadasQr },
+  { header: 'Cajas completas', value: (r) => r.cajasCompletas },
+];
+
 const MOTIVO_COLUMNS: ExportColumn<MotivoRow>[] = [
   { header: 'Motivo', value: (r) => r.motivo },
   { header: 'Total', value: (r) => r.total },
@@ -98,6 +118,12 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
   const { operatorName, selectedProductionId } = useProductionSelection();
   const { productions } = useProductions();
   const { metrics, services, loading: metricsLoading, error: metricsError, dataVersion: metricsVersion, reload: reloadMetrics } = useProductionMetrics(selectedProductionId);
+  const avanceRealKpis = [
+    { label: 'Placas completadas via QR', value: metrics.placasCompletadas },
+    { label: 'Placas faltantes por completar', value: metrics.placasFaltantesCompletar },
+    { label: 'Reoperaciones pendientes de recuperar', value: metrics.reoperacionesPendientes },
+    { label: 'Recuperadas via Completado QR', value: metrics.reoperacionesRecuperadasQr },
+  ];
   const { data: reportData, version: reportVersion, loading: reportLoading, error: reportError, reload: reloadReport } = useVersionedData(
     'report',
     selectedProductionId,
@@ -261,13 +287,29 @@ export function ReportsPage({ onNavigate }: ScreenProps) {
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 2xl:grid-cols-6">
+        <KpiCard icon={CheckCircle2} label="Avance real" value={formatPercent(metrics.porcentajeAvanceReal)} tone="emerald" hint={`Placas completadas via QR: ${metrics.placasCompletadas} de ${metrics.totalPlacas}.`} />
         <KpiCard icon={RotateCcw} label="Registros de reoperación" value={metrics.totalReoperaciones} tone="amber" hint="Cada vez que una placa fue enviada a reoperar." />
         <KpiCard icon={AlertCircle} label="Placas pendientes" value={metrics.placasConPendientes} tone="red" hint="Placas con una reoperación sin resolver. Cada placa cuenta una vez." />
         <KpiCard icon={CheckCircle2} label="Recuperaciones" value={metrics.totalRecuperaciones} tone="emerald" hint="Recuperaciones registradas." />
-        <KpiCard icon={Users} label="Placas afectadas" value={metrics.placasAfectadas} tone="navy" hint="Placas distintas con al menos una reoperación, incluidas las recuperadas." />
-        <KpiCard icon={Package} label="Cajas pendientes" value={metrics.cajasPendientes} tone="red" hint="Cajas con alguna reoperación sin resolver." />
+        <KpiCard icon={Package} label="Cajas completas" value={metrics.cajasCompletas} tone="emerald" hint="Cajas con el 100% de sus placas completadas y cerradas." />
         <KpiCard icon={Wrench} label="Servicios completos" value={metrics.serviciosCompletos} tone="emerald" hint="Servicios sin reoperaciones pendientes ni cajas en proceso." />
       </div>
+
+      <ReportSection
+        title="Avance real de producción (Completados QR)"
+        description="Placas escaneadas y marcadas como completadas frente al total, placas faltantes por completar y placas recuperadas automaticamente via Completado QR."
+        actions={exportMenu('Avance real de producción', 'avance-real-produccion', AVANCE_REAL_COLUMNS, [metrics])}
+      >
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+          {avanceRealKpis.map((kpi) => (
+            <KpiCard key={kpi.label} icon={ScanLine} label={kpi.label} value={kpi.value} tone="navy" />
+          ))}
+        </div>
+        <div className="mt-4 rounded-xl border border-border bg-muted/50 p-4 sm:p-5">
+          <h3 className="mb-4 text-sm font-semibold text-primary">Porcentaje de avance real</h3>
+          <HorizontalBars items={[{ label: 'Avance real', value: metrics.porcentajeAvanceReal }]} formatValue={formatPercent} />
+        </div>
+      </ReportSection>
 
       <ReportSection
         title="Resumen general por servicio"

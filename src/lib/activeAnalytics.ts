@@ -10,10 +10,15 @@ export interface ProductionSnapshot {
 export interface ComparisonRow {
   produccion: string;
   totalPlacas: number;
+  placasCompletadas: number;
+  placasFaltantesCompletar: number;
+  porcentajeAvanceReal: number;
   placasAfectadas: number;
   totalReoperaciones: number;
   reoperacionesPendientes: number;
   totalRecuperaciones: number;
+  reoperacionesRecuperadasQr: number;
+  cajasCompletas: number;
   cajasPendientes: number;
   porcentajeReoperaciones: number;
 }
@@ -67,6 +72,10 @@ function sumMetrics(items: ProductionMetrics[]): ProductionMetrics {
     cajasCompletas: sumOf(items, (m) => m.cajasCompletas),
     cajasEnProceso: sumOf(items, (m) => m.cajasEnProceso),
     cajasCompletadasRo: sumOf(items, (m) => m.cajasCompletadasRo),
+    placasCompletadas: sumOf(items, (m) => m.placasCompletadas),
+    placasFaltantesCompletar: sumOf(items, (m) => m.placasFaltantesCompletar),
+    porcentajeAvanceReal: percent(sumOf(items, (m) => m.placasCompletadas), totalPlacas),
+    reoperacionesRecuperadasQr: sumOf(items, (m) => m.reoperacionesRecuperadasQr),
     serviciosConReoperaciones: sumOf(items, (m) => m.serviciosConReoperaciones),
     serviciosPendientes: sumOf(items, (m) => m.serviciosPendientes),
     serviciosEnProceso: sumOf(items, (m) => m.serviciosEnProceso),
@@ -136,10 +145,15 @@ export function aggregateActiveProductions(snapshots: ProductionSnapshot[]): Act
       .map((s) => ({
       produccion: s.produccion,
       totalPlacas: s.metrics.totalPlacas,
+      placasCompletadas: s.metrics.placasCompletadas,
+      placasFaltantesCompletar: s.metrics.placasFaltantesCompletar,
+      porcentajeAvanceReal: s.metrics.porcentajeAvanceReal,
       placasAfectadas: s.metrics.placasAfectadas,
       totalReoperaciones: s.metrics.totalReoperaciones,
       reoperacionesPendientes: s.metrics.reoperacionesPendientes,
       totalRecuperaciones: s.metrics.totalRecuperaciones,
+      reoperacionesRecuperadasQr: s.metrics.reoperacionesRecuperadasQr,
+      cajasCompletas: s.metrics.cajasCompletas,
       cajasPendientes: s.metrics.cajasPendientes,
       porcentajeReoperaciones: percent(s.metrics.totalReoperaciones, totals.placasAfectadas),
       }))

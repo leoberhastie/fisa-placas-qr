@@ -28,10 +28,15 @@ const CAJAS_PAGE_SIZE = 50;
 const COMPARISON_COLUMNS: ExportColumn<ComparisonRow>[] = [
   { header: 'Producción', value: (r) => r.produccion },
   { header: 'Placas', value: (r) => r.totalPlacas },
+  { header: 'Placas completadas via QR', value: (r) => r.placasCompletadas },
+  { header: 'Faltantes por completar', value: (r) => r.placasFaltantesCompletar },
+  { header: 'Avance real (%)', value: (r) => formatPercent(r.porcentajeAvanceReal) },
   { header: 'Placas afectadas', value: (r) => r.placasAfectadas },
   { header: 'Reoperaciones', value: (r) => r.totalReoperaciones },
   { header: 'Pendientes', value: (r) => r.reoperacionesPendientes },
   { header: 'Recuperaciones', value: (r) => r.totalRecuperaciones },
+  { header: 'Recuperadas via QR', value: (r) => r.reoperacionesRecuperadasQr },
+  { header: 'Cajas completas', value: (r) => r.cajasCompletas },
   { header: 'Cajas pendientes', value: (r) => r.cajasPendientes },
   { header: '% de reoperaciones', value: (r) => formatPercent(r.porcentajeReoperaciones) },
 ];
@@ -149,10 +154,15 @@ export function ActiveAnalyticsPage() {
   const comparisonColumns: DataTableColumn<ComparisonRow>[] = [
     { header: 'Producción', cell: (r) => <span className="font-semibold text-primary">{r.produccion}</span> },
     { header: 'Placas', cell: (r) => <span className="tabular-nums">{r.totalPlacas}</span> },
+    { header: 'Completadas', cell: (r) => <span className="tabular-nums text-success">{r.placasCompletadas}</span> },
+    { header: 'Faltantes', cell: (r) => <span className="tabular-nums text-warning">{r.placasFaltantesCompletar}</span> },
+    { header: 'Avance real', cell: (r) => <span className="font-semibold tabular-nums">{formatPercent(r.porcentajeAvanceReal)}</span> },
     { header: 'Afectadas', cell: (r) => <span className="tabular-nums">{r.placasAfectadas}</span> },
     { header: 'Reoperaciones', cell: (r) => <span className="tabular-nums">{r.totalReoperaciones}</span> },
     { header: 'Pendientes', cell: (r) => <span className="tabular-nums text-warning">{r.reoperacionesPendientes}</span> },
     { header: 'Recuperaciones', cell: (r) => <span className="tabular-nums text-success">{r.totalRecuperaciones}</span> },
+    { header: 'Recuperadas via QR', cell: (r) => <span className="tabular-nums text-success">{r.reoperacionesRecuperadasQr}</span> },
+    { header: 'Cajas completas', cell: (r) => <span className="tabular-nums">{r.cajasCompletas}</span> },
     { header: 'Cajas pendientes', cell: (r) => <span className="tabular-nums">{r.cajasPendientes}</span> },
     { header: '% reop.', cell: (r) => <span className="font-semibold tabular-nums">{formatPercent(r.porcentajeReoperaciones)}</span> },
   ];
@@ -326,13 +336,14 @@ export function ActiveAnalyticsPage() {
 
       {totals && (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 2xl:grid-cols-4">
+          <KpiCard icon={CheckCircle2} label="Avance real" value={formatPercent(totals.porcentajeAvanceReal)} tone="emerald" hint={`${totals.placasCompletadas} de ${totals.totalPlacas} placas completadas via QR.`} />
           <KpiCard icon={Layers} label="Producciones seleccionadas" value={productionCount} tone="navy" hint="Producciones incluidas en este análisis." />
-          <KpiCard visible = {false} icon={RotateCcw} label="Registros de reoperación" value={totals.totalReoperaciones} tone="amber" hint="Cada vez que una placa fue enviada a reoperar." />
+          <KpiCard icon={RotateCcw} label="Registros de reoperación" value={totals.totalReoperaciones} tone="amber" hint="Cada vez que una placa fue enviada a reoperar." />
           <KpiCard icon={AlertCircle} label="Placas pendientes" value={totals.placasConPendientes} tone="red" hint="Placas con una reoperación sin resolver. Cada placa cuenta una vez." />
-          <KpiCard visible= {false} icon={CheckCircle2} label="Recuperaciones" value={totals.totalRecuperaciones} tone="emerald" hint="Recuperaciones registradas." />
+          <KpiCard icon={CheckCircle2} label="Recuperaciones" value={totals.totalRecuperaciones} tone="emerald" hint="Recuperaciones registradas, incluidas las via Completado QR." />
           <KpiCard icon={Users} label="Placas reoperadas" value={totals.placasAfectadas} tone="navy" hint="Placas distintas con al menos una reoperación, incluidas las recuperadas." />
           <KpiCard icon={Percent} label="Placas reoperadas del total" value={formatPercent(totals.porcentajePlacasAfectadas)} tone="amber" hint={`${totals.placasAfectadas} de ${totals.totalPlacas} placas de las producciones seleccionadas`} />
-          <KpiCard icon={Package} label="Cajas pendientes" value={totals.cajasPendientes} tone="red" hint="Cajas con alguna reoperación sin resolver." />
+          <KpiCard icon={Package} label="Cajas completas" value={totals.cajasCompletas} tone="emerald" hint="Cajas con el 100% de sus placas completadas y cerradas." />
         </div>
       )}
 

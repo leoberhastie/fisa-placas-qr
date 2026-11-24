@@ -8,6 +8,7 @@ import {
   Percent,
   Rows3,
   RotateCcw,
+  ScanLine,
   Wrench,
 } from 'lucide-react';
 import { SelectedProductionBanner } from '@/components/productions/SelectedProductionBanner';
@@ -48,12 +49,15 @@ export function ManagerDashboardPage({ onNavigate }: ScreenProps) {
     usuario: operatorName ?? profile?.full_name ?? session?.user.email ?? '—',
     filtros: [],
     kpis: [
+      { label: 'Avance real (%)', value: formatPercent(metrics.porcentajeAvanceReal) },
+      { label: 'Placas completadas via QR', value: metrics.placasCompletadas },
+      { label: 'Placas faltantes por completar', value: metrics.placasFaltantesCompletar },
+      { label: 'Cajas completas', value: metrics.cajasCompletas },
       { label: 'Reoperaciones pendientes', value: metrics.reoperacionesPendientes },
       { label: 'Total histórico de reoperaciones', value: metrics.totalReoperaciones },
       { label: 'Total de recuperaciones', value: metrics.totalRecuperaciones },
+      { label: 'Recuperadas via Completado QR', value: metrics.reoperacionesRecuperadasQr },
       { label: 'Porcentaje de recuperación', value: formatPercent(metrics.porcentajeRecuperacion) },
-      { label: 'Cajas pendientes', value: metrics.cajasPendientes },
-      { label: 'Cajas completas', value: metrics.cajasCompletas },
       { label: 'Servicios pendientes', value: metrics.serviciosPendientes },
       { label: 'Servicios completos', value: metrics.serviciosCompletos },
     ],
@@ -95,6 +99,13 @@ export function ManagerDashboardPage({ onNavigate }: ScreenProps) {
       ) : (
         <PageLoader loading={loading} error={error} onRetry={handleRefreshData} hasData={!loading && !error}>
           <>
+          <section aria-label="Avance real de producción" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard label="Avance real" value={pct(metrics.porcentajeAvanceReal)} icon={Percent} tone="emerald" hint={`Placas completadas via QR: ${metrics.placasCompletadas} de ${metrics.totalPlacas}.`} />
+            <KpiCard label="Placas completadas" value={value(metrics.placasCompletadas)} icon={CheckCircle2} tone="emerald" hint="Escaneadas y marcadas como completadas en Completado QR." />
+            <KpiCard label="Placas faltantes por completar" value={value(metrics.placasFaltantesCompletar)} icon={ScanLine} tone="amber" hint="Placas que aún no se escanean, incluidas las retenidas por reoperación." />
+            <KpiCard label="Cajas completas" value={value(metrics.cajasCompletas)} icon={PackageCheck} tone="emerald" hint="Cajas con el 100% de sus placas completadas y cerradas." />
+          </section>
+
           <section aria-label="Reoperaciones y recuperaciones" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard label="Reoperaciones pendientes" value={value(metrics.reoperacionesPendientes)} icon={AlertTriangle} tone="red" hint="Registros de reoperación sin resolver. Una placa puede tener más de uno." />
             <KpiCard label="Total histórico de reoperaciones" value={value(metrics.totalReoperaciones)} icon={RotateCcw} tone="navy" hint="Cada vez que una placa fue enviada a reoperar." />

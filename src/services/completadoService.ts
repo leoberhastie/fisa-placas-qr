@@ -10,6 +10,7 @@ export interface MarcarPlacaResult {
   caja_completada_automatico?: boolean;
   total_placas_caja?: number;
   completadas_caja?: number;
+  reoperaciones_cerradas?: number;
   error?: string;
 }
 
