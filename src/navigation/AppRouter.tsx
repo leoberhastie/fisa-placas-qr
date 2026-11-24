@@ -13,6 +13,8 @@ import { ActiveAnalyticsPage } from '@/pages/ActiveAnalyticsPage';
 import { ReportsPage } from '@/pages/ReportsPage';
 import { ServicesPage } from '@/pages/ServicesPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import { CompletadoQrPage } from '@/pages/CompletadoQrPage';
+import { AuditoriaPage } from '@/pages/AuditoriaPage';
 import { getRoutesForRole, HOME_ROUTE_BY_ROLE } from '@/navigation/routes';
 import type { Profile } from '@/types/domain';
 
@@ -33,6 +35,8 @@ const SCREEN_BY_PATH: Record<string, ComponentType<ScreenProps>> = {
   '/reportes': ReportsPage,
   '/analisis-global': ActiveAnalyticsPage,
   '/manual': ManualPage,
+  '/completado': CompletadoQrPage,
+  '/auditoria': AuditoriaPage,
 };
 
 interface AppRouterProps {

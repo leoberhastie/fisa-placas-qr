@@ -1,6 +1,7 @@
 import {
   BookOpen,
   ClipboardList,
+  ClipboardCheck,
   FileBarChart,
   Gauge,
   Globe,
@@ -10,6 +11,7 @@ import {
   Package,
   QrCode,
   Settings,
+  CheckCircle2,
   type LucideIcon,
 } from 'lucide-react';
 import type { UserRole } from '@/types/domain';
@@ -34,6 +36,8 @@ export const APP_ROUTES: AppRoute[] = [
   { path: '/reportes', label: 'Reportes', shortLabel: 'Reportes', icon: FileBarChart, roles: ['admin', 'gerente'] },
   { path: '/analisis-global', label: 'Análisis global', shortLabel: 'Global', icon: Globe, roles: ['admin', 'gerente'] },
   { path: '/manual', label: 'Manual de usuario', shortLabel: 'Manual', icon: BookOpen, roles: ['admin', 'operador', 'gerente'] },
+  { path: '/completado', label: 'Completado QR', shortLabel: 'Completado', icon: CheckCircle2, roles: ['admin', 'operador'] },
+  { path: '/auditoria', label: 'Auditoría de reoperaciones', shortLabel: 'Auditoría', icon: ClipboardCheck, roles: ['admin', 'gerente'] },
 ];
 
 export const HOME_ROUTE_BY_ROLE: Record<UserRole, string> = {
