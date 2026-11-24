@@ -46,15 +46,15 @@ interface AppRouterProps {
 export function AppRouter({ profile }: AppRouterProps) {
   const [path, navigate] = useHashPath();
   const routes = getRoutesForRole(profile.role);
-  const homePath = HOME_ROUTE_BY_ROLE[profile.role];
+  const fallbackPath = HOME_ROUTE_BY_ROLE[profile.role] ?? '/completado';
   const isAllowed = path === '/produccion' || routes.some((route) => route.path === path);
-  const activePath = isAllowed ? path : homePath;
+  const activePath = isAllowed ? path : fallbackPath;
 
   useEffect(() => {
-    if (!isAllowed) navigate(homePath);
-  }, [isAllowed, homePath, navigate]);
+    if (!isAllowed) navigate(fallbackPath);
+  }, [isAllowed, fallbackPath, navigate]);
 
-  const Screen = SCREEN_BY_PATH[activePath];
+  const Screen = SCREEN_BY_PATH[activePath] ?? SCREEN_BY_PATH[fallbackPath];
   const userName = profile.full_name || profile.email;
 
   if (!Screen) {
@@ -66,9 +66,16 @@ export function AppRouter({ profile }: AppRouterProps) {
         role={profile.role}
         userName={userName}
       >
-        <section className="rounded-2xl border border-destructive/30 bg-card p-8 text-center">
-          <h1 className="font-heading text-xl font-semibold text-foreground">Ruta no disponible</h1>
-          <p className="mt-2 text-sm text-muted-foreground">No se encontró una pantalla válida para tu perfil.</p>
+        <section className="rounded-2xl border border-warning/30 bg-warning/10 p-8 text-center">
+          <h1 className="font-heading text-xl font-semibold text-foreground">Cargando sesión...</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Preparando tu pantalla de trabajo.</p>
+          <button
+            type="button"
+            onClick={() => navigate(fallbackPath)}
+            className="mt-4 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary"
+          >
+            Ir al inicio
+          </button>
         </section>
       </AppShell>
     );
