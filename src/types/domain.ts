@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'operador' | 'gerente';
+export type UserRole = 'admin' | 'operador' | 'gerente' | 'filtro';
 
 export interface Profile {
   id: string;
@@ -139,6 +139,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Administrador',
   operador: 'Operador',
   gerente: 'Gerente',
+  filtro: 'Filtro',
 };
 
 export const PRODUCTION_STATUS_LABELS: Record<ProductionStatus, string> = {
@@ -182,5 +183,5 @@ export function canImportExcel(role: UserRole): boolean {
 }
 
 export function canRegisterOperations(role: UserRole): boolean {
-  return role === 'admin' || role === 'operador' || role === 'gerente';
+  return role === 'admin' || role === 'operador' || role === 'gerente' || role === 'filtro';
 }

@@ -1,18 +1,13 @@
-import { useCallback, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
-  AlertCircle,
   Camera,
   CameraOff,
   CheckCircle2,
-  Keyboard,
   Loader2,
   Package,
   QrCode,
   RefreshCw,
   ScanLine,
-  Search,
-  Zap,
-  ZapOff,
 } from 'lucide-react';
 import { CompletadoInfoModal } from '@/components/completado/CompletadoInfoModal';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -25,7 +20,6 @@ import { parseQrContent } from '@/services/qrService';
 import { loadQrReaderConfig, playBeep, vibrate, type QrReaderConfig } from '@/lib/qrConfig';
 import { findPlaca } from '@/services/operationService';
 import { marcarPlacaCompletada, obtenerAvanceProduccion, type AvanceProduccion, type MarcarPlacaResult } from '@/services/completadoService';
-import { type PlatePosition } from '@/types/domain';
 
 interface ScreenProps {
   onNavigate: (path: string) => void;
@@ -44,17 +38,11 @@ export function CompletadoQrPage({ onNavigate }: ScreenProps) {
   const { reload } = useProductionData(selectedProductionId);
   const [qrConfig] = useState<QrReaderConfig>(loadQrReaderConfig);
 
-  const [mode, setMode] = useState<'auto' | 'manual'>(qrConfig.scanMode);
   const [modalState, setModalState] = useState<ModalState | null>(null);
   const [modalLock, setModalLock] = useState(false);
   const [lastSerie, setLastSerie] = useState<string | null>(null);
   const [avance, setAvance] = useState<AvanceProduccion | null>(null);
   const [avanceLoading, setAvanceLoading] = useState(false);
-
-  const [manualSerie, setManualSerie] = useState('');
-  const [manualPosicion, setManualPosicion] = useState<PlatePosition | ''>('');
-  const [manualSearching, setManualSearching] = useState(false);
-  const [manualError, setManualError] = useState<string | null>(null);
 
   const displayName = operatorName ?? profile?.full_name ?? profile?.email ?? '—';
   const userEmail = session?.user.email ?? '';
@@ -105,7 +93,6 @@ export function CompletadoQrPage({ onNavigate }: ScreenProps) {
             notFoundSerie: parsed.serie,
           });
         } else {
-          // Marcar como completada inmediatamente
           const result = await marcarPlacaCompletada(
             selectedProductionId,
             placa.id,
@@ -135,7 +122,7 @@ export function CompletadoQrPage({ onNavigate }: ScreenProps) {
 
   const { containerId, state, error, restart } = useQrScanner({
     onScan: handleScan,
-    enabled: mode === 'auto',
+    enabled: true,
     locked: modalLock,
     cameraFacing: qrConfig.cameraFacing,
   });
@@ -144,48 +131,6 @@ export function CompletadoQrPage({ onNavigate }: ScreenProps) {
     setModalState(null);
     setModalLock(false);
   }, []);
-
-  const handleManualSearch = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedProductionId || !manualSerie.trim() || !manualPosicion) return;
-    setManualSearching(true);
-    setManualError(null);
-    setModalLock(true);
-    try {
-      const placa = await findPlaca(selectedProductionId, manualSerie.trim(), manualPosicion);
-      if (!placa) {
-        setManualError('No se encontró una placa con esa serie y posición en la producción activa.');
-        setModalState({
-          result: null,
-          placaInfo: null,
-          notFound: true,
-          notFoundSerie: manualSerie.trim(),
-        });
-      } else {
-        const result = await marcarPlacaCompletada(
-          selectedProductionId,
-          placa.id,
-          displayName,
-          userEmail,
-        );
-        setLastSerie(placa.serie);
-        setModalState({
-          result,
-          placaInfo: { serie: placa.serie, posicion: placa.posicion, servicio: placa.servicio, numero_caja: placa.numero_caja },
-          notFound: false,
-          notFoundSerie: null,
-        });
-        setManualSerie('');
-        setManualPosicion('');
-        void loadAvance();
-        void reload();
-      }
-    } catch {
-      setManualError('Error al buscar o marcar la placa.');
-    } finally {
-      setManualSearching(false);
-    }
-  };
 
   // Cargar avance al montar
   const mountedRef = useRef(false);
@@ -202,7 +147,7 @@ export function CompletadoQrPage({ onNavigate }: ScreenProps) {
           <p className="font-medium text-warning">Selecciona una producción en el menú para empezar.</p>
           <button
             type="button"
-            onClick={() => onNavigate('/producciones')}
+            onClick={() => onNavigate('/produccion')}
             className="mt-3 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary"
           >
             Ir a producciones
@@ -230,148 +175,65 @@ export function CompletadoQrPage({ onNavigate }: ScreenProps) {
         </div>
       )}
 
-      {/* Scanner / Manual */}
-      {mode === 'auto' ? (
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-          {error && (
-            <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              <CameraOff className="mt-0.5 h-5 w-5 shrink-0" />
-              <div>
-                <p className="font-medium">Error de cámara</p>
-                <p className="mt-0.5 text-xs">{error}</p>
-                <button
-                  type="button"
-                  onClick={() => void restart()}
-                  className="mt-2 flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-medium text-primary-foreground transition hover:bg-destructive"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  Reintentar
-                </button>
-              </div>
+      {/* Scanner — solo lectura QR, sin entrada manual */}
+      <section className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+        {error && (
+          <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <CameraOff className="mt-0.5 h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-medium">Error de cámara</p>
+              <p className="mt-0.5 text-xs">{error}</p>
+              <button
+                type="button"
+                onClick={() => void restart()}
+                className="mt-2 flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-medium text-primary-foreground transition hover:bg-destructive"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Reintentar
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col items-center gap-3">
+          <div
+            id={containerId}
+            className="overflow-hidden rounded-2xl border-2 border-border bg-primary [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
+            style={{ width: '100%', maxWidth: 420, aspectRatio: '1 / 1' }}
+          />
+
+          {state === 'starting' && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin text-accent" />
+              Iniciando cámara...
             </div>
           )}
-
-          <div className="flex flex-col items-center gap-3">
-            <div
-              id={containerId}
-              className="overflow-hidden rounded-2xl border-2 border-border bg-primary [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
-              style={{ width: '100%', maxWidth: 420, aspectRatio: '1 / 1' }}
-            />
-
-            {state === 'starting' && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin text-accent" />
-                Iniciando cámara...
-              </div>
-            )}
-            {state === 'scanning' && !modalLock && (
-              <div className="flex items-center gap-2 text-sm text-success">
-                <Camera className="h-4 w-4" />
-                Escaneando...
-              </div>
-            )}
-            {modalLock && (
-              <div className="flex items-center gap-2 text-sm text-accent">
-                <ScanLine className="h-4 w-4" />
-                Cámara en pausa
-              </div>
-            )}
-            {state === 'stopped' && !modalLock && (
-              <p className="text-sm text-muted-foreground">Cámara detenida.</p>
-            )}
-
-            <button
-              type="button"
-              onClick={() => { closeModal(); void restart(); }}
-              className="flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-accent active:scale-[0.98]"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Escanear siguiente
-            </button>
-          </div>
-        </section>
-      ) : (
-        <section className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary/80">
-              <Keyboard className="h-5 w-5" />
+          {state === 'scanning' && !modalLock && (
+            <div className="flex items-center gap-2 text-sm text-success">
+              <Camera className="h-4 w-4" />
+              Escaneando...
             </div>
-            <div>
-              <h2 className="text-base font-semibold text-primary">Búsqueda manual</h2>
-              <p className="text-sm text-muted-foreground">Escribe la serie y posición de la placa.</p>
+          )}
+          {modalLock && (
+            <div className="flex items-center gap-2 text-sm text-accent">
+              <ScanLine className="h-4 w-4" />
+              Cámara en pausa
             </div>
-          </div>
+          )}
+          {state === 'stopped' && !modalLock && (
+            <p className="text-sm text-muted-foreground">Cámara detenida.</p>
+          )}
 
-          <form onSubmit={handleManualSearch} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="manual-serie-c" className="block text-sm font-medium text-foreground/80">Serie</label>
-                <input
-                  id="manual-serie-c"
-                  type="text"
-                  value={manualSerie}
-                  onChange={(e) => setManualSerie(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-                  placeholder="Ej: 72SHE1"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="manual-pos-c" className="block text-sm font-medium text-foreground/80">Posición</label>
-                <select
-                  id="manual-pos-c"
-                  value={manualPosicion}
-                  onChange={(e) => setManualPosicion(e.target.value as PlatePosition | '')}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-                >
-                  <option value="">Selecciona posición</option>
-                  <option value="FRONTAL">FRONTAL</option>
-                  <option value="TRASERA">TRASERA</option>
-                </select>
-              </div>
-            </div>
-            {manualError && (
-              <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{manualError}</span>
-              </div>
-            )}
-            <button
-              type="submit"
-              disabled={manualSearching || !manualSerie.trim() || !manualPosicion}
-              className="flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {manualSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              {manualSearching ? 'Marcando...' : 'Marcar como completada'}
-            </button>
-          </form>
-        </section>
-      )}
-
-      {/* Mode toggle */}
-      <div className="flex justify-center">
-        <div className="flex gap-2 rounded-xl border border-border bg-card p-1.5 shadow-sm">
           <button
             type="button"
-            onClick={() => setMode('auto')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
-              mode === 'auto' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50'
-            }`}
+            onClick={() => { closeModal(); void restart(); }}
+            className="flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-accent active:scale-[0.98]"
           >
-            {mode === 'auto' ? <Zap className="h-4 w-4" /> : <ZapOff className="h-4 w-4" />}
-            Automático
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('manual')}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition ${
-              mode === 'manual' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50'
-            }`}
-          >
-            <Keyboard className="h-4 w-4" />
-            Manual
+            <RefreshCw className="h-4 w-4" />
+            Escanear siguiente
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Avance por servicio */}
       {avance && avance.servicios.length > 0 && (
