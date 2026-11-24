@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { AlertCircle, CheckCircle2, Clock, Package, RotateCcw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import type { MarcarPlacaResult } from '@/services/completadoService';
@@ -108,6 +107,15 @@ export function CompletadoInfoModal({
                 />
               </div>
             </div>
+
+            {(result.reoperaciones_cerradas ?? 0) > 0 && (
+              <div className="flex items-center gap-3 rounded-lg border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent">
+                <RotateCcw className="h-5 w-5 shrink-0" />
+                <p className="font-medium">
+                  Se cerraron {result.reoperaciones_cerradas} reoperacion{result.reoperaciones_cerradas === 1 ? '' : 'es'} pendiente{result.reoperaciones_cerradas === 1 ? '' : 's'} automáticamente.
+                </p>
+              </div>
+            )}
 
             {result.caja_completada_automatico && (
               <div className="flex items-center gap-3 rounded-lg border border-success/40 bg-success/10 px-4 py-3 text-sm text-success">

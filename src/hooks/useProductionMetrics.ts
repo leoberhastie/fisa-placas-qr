@@ -32,6 +32,10 @@ const EMPTY_METRICS: ProductionMetrics = {
   serviciosPendientes: 0,
   serviciosEnProceso: 0,
   serviciosCompletos: 0,
+  placasCompletadas: 0,
+  placasFaltantesCompletar: 0,
+  porcentajeAvanceReal: 0,
+  reoperacionesRecuperadasQr: 0,
 };
 
 async function fetchDashboard(produccionId: string): Promise<ProductionDashboard> {

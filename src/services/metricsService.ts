@@ -21,6 +21,10 @@ export interface ProductionMetrics {
   serviciosPendientes: number;
   serviciosEnProceso: number;
   serviciosCompletos: number;
+  placasCompletadas: number;
+  placasFaltantesCompletar: number;
+  porcentajeAvanceReal: number;
+  reoperacionesRecuperadasQr: number;
 }
 
 export interface ProcesoReoperacionTotal {
@@ -171,6 +175,10 @@ export async function fetchProductionMetrics(produccionId: string): Promise<Prod
     serviciosPendientes: Number(d.serviciosPendientes ?? 0),
     serviciosEnProceso: Number(d.serviciosEnProceso ?? 0),
     serviciosCompletos: Number(d.serviciosCompletos ?? 0),
+    placasCompletadas: Number(d.placasCompletadas ?? 0),
+    placasFaltantesCompletar: Number(d.placasFaltantesCompletar ?? 0),
+    porcentajeAvanceReal: Number(d.porcentajeAvanceReal ?? 0),
+    reoperacionesRecuperadasQr: Number(d.reoperacionesRecuperadasQr ?? 0),
   };
 }
 

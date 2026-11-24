@@ -60,6 +60,10 @@ export interface ProductionMetrics {
   serviciosPendientes: number;
   serviciosEnProceso?: number;
   serviciosCompletos: number;
+  placasCompletadas?: number;
+  placasFaltantesCompletar?: number;
+  porcentajeAvanceReal?: number;
+  reoperacionesRecuperadasQr?: number;
   services: ServiceMetrics[];
 }
 
