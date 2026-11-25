@@ -38,6 +38,7 @@ export const BOX_EXPORT_COLUMNS: ExportColumn<BoxMetrics>[] = [
   { header: 'Pendientes', value: (b) => b.pendientes },
   { header: 'Recuperaciones', value: (b) => b.recuperaciones },
   { header: 'Estado', value: (b) => BOX_STATUS_LABELS[b.estado] },
+  { header: 'Placas no completadas al cierre', value: (b) => b.placasNoCompletadas ?? 0 },
 ];
 
 export const PLACA_MOVEMENT_EXPORT_COLUMNS: ExportColumn<PlacaMovementRow>[] = [

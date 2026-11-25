@@ -17,6 +17,7 @@ export interface BoxMetrics {
   estado: MetricStatus;
   completadaManual?: boolean;
   completadaAt?: string | null;
+  placasNoCompletadas?: number;
   serieInicial?: string | null;
   serieFinal?: string | null;
   cantidadSeries?: number;
