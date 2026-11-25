@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, Clock, Package, RotateCcw } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import type { MarcarPlacaResult } from '@/services/completadoService';
@@ -8,7 +9,10 @@ interface CompletadoInfoModalProps {
   notFound: boolean;
   notFoundSerie: string | null;
   onClose: () => void;
+  auto?: boolean;
 }
+
+const AUTO_MS = 3000;
 
 export function CompletadoInfoModal({
   result,
@@ -16,8 +20,27 @@ export function CompletadoInfoModal({
   notFound,
   notFoundSerie,
   onClose,
+  auto = false,
 }: CompletadoInfoModalProps) {
   const alreadyDone = result?.ya_completada ?? false;
+  const shouldAuto = auto && !notFound;
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (!shouldAuto) return;
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      const pct = Math.min(100, ((Date.now() - started) / AUTO_MS) * 100);
+      setProgress(pct);
+      if (pct >= 100) {
+        window.clearInterval(timer);
+        onClose();
+      }
+    }, 50);
+    return () => window.clearInterval(timer);
+  }, [shouldAuto, onClose]);
+
+  const remaining = Math.max(1, Math.ceil((AUTO_MS - (progress / 100) * AUTO_MS) / 1000));
 
   const title = notFound
     ? 'Placa no encontrada'
@@ -30,6 +53,20 @@ export function CompletadoInfoModal({
   return (
     <Modal title={title} onClose={onClose}>
       <div className="space-y-5 px-6 py-6">
+        {shouldAuto && (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Continuando al siguiente escaneo</span>
+              <span className="font-semibold text-primary">{remaining}s</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className={`h-full rounded-full transition-[width] duration-75 ease-linear ${alreadyDone ? 'bg-destructive' : 'bg-success'}`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        )}
         {notFound && (
           <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
@@ -146,7 +183,7 @@ export function CompletadoInfoModal({
           onClick={onClose}
           className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary"
         >
-          Continuar
+          {shouldAuto ? 'Continuar ahora' : 'Continuar'}
         </button>
       </div>
     </Modal>

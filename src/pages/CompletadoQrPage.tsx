@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Camera,
   CameraOff,
@@ -131,6 +131,17 @@ export function CompletadoQrPage({ onNavigate }: ScreenProps) {
     setModalState(null);
     setModalLock(false);
   }, []);
+
+  const closeModalRef = useRef(closeModal);
+  closeModalRef.current = closeModal;
+
+  // Completado automatico: tras registrar la placa, el modal se cierra solo
+  // (barra de 3s en el modal) y la camara retoma el escaneo.
+  useEffect(() => {
+    if (!modalState || modalLock) return;
+    const t = window.setTimeout(() => closeModalRef.current(), 3000);
+    return () => window.clearTimeout(t);
+  }, [modalState, modalLock]);
 
   // Cargar avance al montar
   const mountedRef = useRef(false);
@@ -276,6 +287,7 @@ export function CompletadoQrPage({ onNavigate }: ScreenProps) {
           notFound={modalState.notFound}
           notFoundSerie={modalState.notFoundSerie}
           onClose={closeModal}
+          auto
         />
       )}
     </div>
