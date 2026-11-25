@@ -1,6 +1,6 @@
 import type { HistorialOperacion, Placa, Recuperacion, Reoperation } from '@/types/domain';
 
-export type HistoryTipo = 'reoperacion' | 'recuperacion' | 'importacion';
+export type HistoryTipo = 'reoperacion' | 'recuperacion' | 'importacion' | 'cambio_estado';
 export type HistoryModalidad = 'normal' | 'manual' | 'none';
 
 export interface HistoryRow {
@@ -22,6 +22,7 @@ export const TIPO_LABELS: Record<HistoryTipo, string> = {
   reoperacion: 'Reoperación',
   recuperacion: 'Recuperación',
   importacion: 'Importación',
+  cambio_estado: 'Cambio de estado',
 };
 
 export const MODALIDAD_LABELS: Record<HistoryModalidad, string> = {
@@ -88,5 +89,28 @@ export function buildHistoryRows(
       detalle: h.observaciones,
     }));
 
-  return [...reopRows, ...recupRows, ...importRows].sort((a, b) => b.fechaIso.localeCompare(a.fechaIso));
+  const estadoRows: HistoryRow[] = historial
+    .filter((h) => h.tipo_operacion === 'cambio_estado')
+    .map((h) => {
+      const match = /Caja (.+?) del servicio (.+?) (?:marcada|reabierta|cerrada)/.exec(h.observaciones);
+      return {
+        id: `estado-${h.id}`,
+        tipo: 'cambio_estado' as const,
+        modalidad: 'none' as const,
+        fechaIso: h.fecha_hora,
+        placaId: null,
+        serie: '',
+        posicion: '',
+        servicio: match?.[2] ?? '',
+        caja: match?.[1] ?? '',
+        proceso: '',
+        operador: h.usuario || h.operador,
+        detalle: [
+          h.estado_anterior && h.estado_nuevo ? `${h.estado_anterior} → ${h.estado_nuevo}` : '',
+          h.observaciones,
+        ].filter(Boolean).join(' · '),
+      };
+    });
+
+  return [...reopRows, ...recupRows, ...importRows, ...estadoRows].sort((a, b) => b.fechaIso.localeCompare(a.fechaIso));
 }

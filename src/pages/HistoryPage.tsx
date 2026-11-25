@@ -78,6 +78,7 @@ const TIPO_OPTIONS = [
   { value: '', label: 'Todos los tipos' },
   { value: 'reoperacion', label: TIPO_LABELS.reoperacion },
   { value: 'recuperacion', label: TIPO_LABELS.recuperacion },
+  { value: 'cambio_estado', label: TIPO_LABELS.cambio_estado },
   { value: 'importacion', label: TIPO_LABELS.importacion },
 ];
 
@@ -191,7 +192,9 @@ export function HistoryPage({ onNavigate }: ScreenProps) {
               ? 'inline-flex rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning ring-1 ring-inset ring-warning/20'
               : row.tipo === 'recuperacion'
                 ? 'inline-flex rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success ring-1 ring-inset ring-success/20'
-                : 'inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground ring-1 ring-inset ring-muted-foreground/20'
+                : row.tipo === 'cambio_estado'
+                  ? 'inline-flex rounded-full bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent ring-1 ring-inset ring-accent/20'
+                  : 'inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground ring-1 ring-inset ring-muted-foreground/20'
           }
         >
           {TIPO_LABELS[row.tipo]}
