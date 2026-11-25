@@ -71,6 +71,7 @@ export interface BoxMetricRow extends Omit<BoxMetrics, 'placas'> {
   estado: MetricStatus;
   completadaManual: boolean;
   completadaAt: string | null;
+  placasNoCompletadas: number;
 }
 
 export interface ReoperationWithPlaca {
@@ -248,6 +249,7 @@ export async function fetchBoxMetrics(produccionId: string): Promise<BoxMetricRo
     estado: toMetricStatus(String(row.estado)),
     completadaManual: Boolean(row.completada_manual),
     completadaAt: row.completada_at ? String(row.completada_at) : null,
+    placasNoCompletadas: Number(row.placas_no_completadas ?? 0),
     placas: [],
   }));
 }
@@ -343,20 +345,41 @@ export async function fetchServiceBoxPage(
     estado: toMetricStatus(String(row.estado)),
     completadaManual: Boolean(row.completada_manual),
     completadaAt: row.completada_at ? String(row.completada_at) : null,
+    placasNoCompletadas: Number(row.placas_no_completadas ?? 0),
     placas: [],
   }));
   return { boxes, totalCount };
+}
+
+export async function listBoxPlacasNoCompletadas(
+  produccionId: string,
+  servicio: string,
+  numeroCaja: string,
+): Promise<{ placaId: string; serie: string; posicion: string }[]> {
+  const { data, error } = await supabase.rpc('list_box_placas_no_completadas', {
+    p_produccion_id: produccionId,
+    p_servicio: servicio,
+    p_numero_caja: numeroCaja,
+  });
+  if (error || !Array.isArray(data)) throw new Error('No se pudieron cargar las placas sin completar de la caja.');
+  return data.map((row: Record<string, unknown>) => ({
+    placaId: String(row.placa_id),
+    serie: String(row.serie),
+    posicion: String(row.posicion),
+  }));
 }
 
 export async function markBoxCompleted(
   produccionId: string,
   servicio: string,
   numeroCaja: string,
+  cierreResponsable = false,
 ): Promise<{ estado: MetricStatus; completadaManual: boolean; completadaAt: string | null }> {
   const { data, error } = await supabase.rpc('mark_box_completed', {
     p_produccion_id: produccionId,
     p_servicio: servicio,
     p_numero_caja: numeroCaja,
+    p_cierre_responsable: cierreResponsable,
   });
   if (error) throw new Error(error.message || 'No se pudo marcar la caja como completada.');
   const row = (data as Record<string, unknown>[])?.[0] ?? {};
