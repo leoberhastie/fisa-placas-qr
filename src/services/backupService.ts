@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 
-const PAGE_SIZE = 1000;
+const PAGE_SIZE = 500;
+const MAX_RETRIES = 3;
 
 export const BACKUP_TABLES = [
   'productions',
@@ -38,21 +39,35 @@ async function fetchTableAll(
   table: string,
   onRows: (rows: Record<string, unknown>[]) => void,
 ): Promise<number> {
-  let from = 0;
   let total = 0;
+  let lastId: unknown = null;
   for (;;) {
-    const { data, error } = await supabase
-      .from(table)
-      .select('*')
-      .order('id', { ascending: true })
-      .range(from, from + PAGE_SIZE - 1);
-    if (error) throw new Error(`No se pudo leer la tabla ${table}: ${error.message}`);
-    const rows = (data ?? []) as Record<string, unknown>[];
-    if (rows.length === 0) break;
+    let rows: Record<string, unknown>[] | null = null;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      let query = supabase
+        .from(table)
+        .select('*')
+        .order('id', { ascending: true })
+        .limit(PAGE_SIZE);
+      if (lastId !== null) {
+        query = query.gt('id', lastId as never);
+      }
+      const { data, error } = await query;
+      const timedOut = error && /statement timeout|57014/i.test(error.message);
+      if (!error) {
+        rows = data as Record<string, unknown>[];
+        break;
+      }
+      if (!timedOut || attempt === MAX_RETRIES) {
+        throw new Error(`No se pudo leer la tabla ${table}: ${error.message}`);
+      }
+      await new Promise((r) => setTimeout(r, 3000 * attempt));
+    }
+    if (!rows || rows.length === 0) break;
+    lastId = rows[rows.length - 1].id;
     onRows(rows);
     total += rows.length;
     if (rows.length < PAGE_SIZE) break;
-    from += rows.length;
   }
   return total;
 }
