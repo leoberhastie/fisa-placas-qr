@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 
-const PAGE_SIZE = 5000;
+const PAGE_SIZE = 1000;
 
 export const BACKUP_TABLES = [
   'productions',
@@ -44,6 +44,7 @@ async function fetchTableAll(
     const { data, error } = await supabase
       .from(table)
       .select('*')
+      .order('id', { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
     if (error) throw new Error(`No se pudo leer la tabla ${table}: ${error.message}`);
     const rows = (data ?? []) as Record<string, unknown>[];
@@ -51,7 +52,7 @@ async function fetchTableAll(
     onRows(rows);
     total += rows.length;
     if (rows.length < PAGE_SIZE) break;
-    from += PAGE_SIZE;
+    from += rows.length;
   }
   return total;
 }
