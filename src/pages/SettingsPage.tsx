@@ -1,6 +1,7 @@
-import { Factory, FileSpreadsheet, History, Package, Settings as SettingsIcon, QrCode, Database } from 'lucide-react';
+import { Factory, FileSpreadsheet, History, Package, Settings as SettingsIcon, QrCode, DatabaseBackup, Database } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ChangePasswordForm } from '@/components/settings/ChangePasswordForm';
+import { DatabaseBackupSection } from '@/components/settings/DatabaseBackupSection';
 import { QrReaderConfigSection } from '@/components/settings/QrReaderConfigSection';
 import { ResetProductionDataSection } from '@/components/settings/ResetProductionDataSection';
 import { ExcelImportSection } from '@/components/import/ExcelImportSection';
@@ -120,6 +121,12 @@ export function SettingsPage() {
       )}
 
       <ResetProductionDataSection />
+
+      {profile?.role === 'admin' && (
+        <SectionCard icon={DatabaseBackup} title="Respaldo de la base de datos" description="Descarga una copia completa de todos los datos a tu computadora.">
+          <DatabaseBackupSection />
+        </SectionCard>
+      )}
 
       <QrReaderConfigSection />
 
