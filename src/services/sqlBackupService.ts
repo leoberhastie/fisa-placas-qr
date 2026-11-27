@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS productions (
   name text NOT NULL,
   description text,
   status text NOT NULL DEFAULT 'activa',
-  created_by uuid NOT NULL DEFAULT auth_uid_placeholder(),
+  created_by uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   consecutivo integer NOT NULL DEFAULT 0,
