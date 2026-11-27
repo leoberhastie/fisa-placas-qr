@@ -2,6 +2,7 @@ import { Factory, FileSpreadsheet, History, Package, Settings as SettingsIcon, Q
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ChangePasswordForm } from '@/components/settings/ChangePasswordForm';
 import { DatabaseBackupSection } from '@/components/settings/DatabaseBackupSection';
+import { DatabaseRestoreSection } from '@/components/settings/DatabaseRestoreSection';
 import { QrReaderConfigSection } from '@/components/settings/QrReaderConfigSection';
 import { ResetProductionDataSection } from '@/components/settings/ResetProductionDataSection';
 import { ExcelImportSection } from '@/components/import/ExcelImportSection';
@@ -123,9 +124,15 @@ export function SettingsPage() {
       <ResetProductionDataSection />
 
       {profile?.role === 'admin' && (
-        <SectionCard icon={DatabaseBackup} title="Respaldo de la base de datos" description="Descarga una copia completa de todos los datos a tu computadora.">
-          <DatabaseBackupSection />
-        </SectionCard>
+        <>
+          <SectionCard icon={DatabaseBackup} title="Respaldo de la base de datos" description="Descarga los registros de un día o rango de días en archivos SQL divididos.">
+            <DatabaseBackupSection />
+          </SectionCard>
+
+          <SectionCard icon={DatabaseBackup} title="Restaurar respaldo" description="Carga archivos SQL de respaldo para insertar sus registros en la base de datos.">
+            <DatabaseRestoreSection />
+          </SectionCard>
+        </>
       )}
 
       <QrReaderConfigSection />
